@@ -35,3 +35,48 @@ def create_date_range(start_date, end_date=None, \
     return pd.date_range(start=start_date, end=end_date, \
                          freq=freq, tz=tz, name=name, \
                          *args, **kwargs)
+
+def print_opening(do_print=True, *args, **kwargs):
+    '''
+    Function to print opening of algorithm.
+    Inputs:
+        - args and kwargs: both will be printed, but "_" in args will be replaced by " ".
+    '''
+    n_break_chars = 82
+    lines = []
+    lines.append('=' * n_break_chars)
+    header = ['PRICE MODEL']
+    version = ['Version 0.3']
+    copyright = ['Authors: Marco Rosenzweig & Patrick Lorenz']
+    for text in [header, version, copyright]:
+        lines.append(next(map(_format_string, text)))
+    lines.append('-' * n_break_chars)
+    for arg, kwarg in kwargs.items():
+        arg = arg.replace('_', ' ')
+        if not isinstance(kwarg, str):
+            kwarg = str(kwarg)
+        text = [(' = ').join([arg, kwarg])]
+        lines.append(next(map(_format_string, text)))
+    lines.append('=' * n_break_chars)
+    if do_print:
+        for line in lines:
+            print(line)
+
+def print_closing(do_print=True, *args, **kwargs):
+    '''
+    Function to print closing of algorithm.
+    Inputs:
+        - args and kwargs: both will be printed, but "_" in args will be replaced by " ".
+    '''
+    n_break_chars = 82
+    if do_print:
+        print('-' * n_break_chars)
+
+def _format_string(string, center_alligned=True):
+    '''
+    Internal function used for print_opening and print_closing
+    '''
+    special_char = '|'
+    if center_alligned:
+        string = string.center(80)
+    return '{}{}{}'.format(special_char, string, special_char)
