@@ -1,3 +1,2 @@
 # FINANCE
-Easy tool for stock and crypto market evaluations
-(Still under development)
+Easy tools for trading stocks and cryptos. 
