@@ -27,6 +27,9 @@ class MODEL():
         self.ticker_df = dict.fromkeys(self.tickers)
 
     def get_data(self, value='Close', filter_date_range=None, *args, **kwargs):
+        '''
+        Function to get asset historical prices. 
+        '''
         self.data = utils.download_data(tickers=self.tickers, \
                                         value=value, \
                                         *args, **kwargs)
