@@ -2,6 +2,7 @@ import utils
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
+import copy
 
 class MODEL():
     '''
@@ -13,15 +14,9 @@ class MODEL():
         - buy_delay: delay between detecting signals and actual handling.
             default: 1
         - ticker_df: dictionaries of pandas DataFrame for each ticker.
-        -test
     '''
     def __init__(self, tickers, data=None, buy_delay=1):
-        if isinstance(tickers, str):
-            self.tickers = [tickers]
-        elif isinstance(tickers, list):
-            self.tickers = tickers
-        else:
-            raise TypeError('[ERROR]: Input of "tickers" must either be str or list.')
+        self.tickers = self._check_ticker_input(tickers=tickers)
         self.data = data
         self.local_min, self.local_max, self.grad = None, None, None
         self.buy_delay = buy_delay
@@ -53,7 +48,7 @@ class MODEL():
 .format(n_nan_values))
                 answer = ''
                 while answer not in ['y', 'n']:
-                    answer = input('[USER-INPUT]: Remove NaN values? [y/n]:')
+                    answer = input('[USER-INPUT]: Remove NaN values? [y/n]: ')
                     if answer == 'y':
                         force_filter = True
                     elif answer == 'n':
@@ -64,7 +59,6 @@ class MODEL():
                     filtered_data = filtered_data.dropna()
             self.data = filtered_data
             self._print_issue('INFO', 'filter applied.')
-
 
     def eval_model(self, entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
         '''
@@ -188,9 +182,83 @@ penultimate one.')
             self._print_issue('SUMMARY', \
                               'NET WIN: {:.2f}'.format(net_income))
             self._print_issue(None, '='*82)
+
+    def copy_model(self):
+        return copy.deepcopy(self)
+
+    def append_timedelta(self, timedelta):
+        new_entry = self.data.index[-1] + pd.Timedelta(days=timedelta)
+        idx = pd.date_range(start=self.data.index[0], end=new_entry)
+        new_data = self.data.reindex(idx)
+        answer = ''
+        while answer not in ['y', 'n']:
+            answer = input('[USER-INPUT]: Overwrite existing data? [y/n]: ')
+            if answer == 'y':
+                self.data = new_data
+            elif answer == 'n':
+                self._print_issue('INFO', 'No values were appended\
+to the original data. Modified DataFrame will be returned.')
+                return new_data
+            else:
+                self._print_issue('ERROR', 'Answer with "y" or "n".')
+        self._print_issue('INFO', 'NaN values were append.')
+
+    def comp_break_values(self, tickers='all'):
+        if tickers == 'all':
+            tickers = self.tickers
+        else:
+            tickers = self._check_ticker_input(tickers=tickers)
+        valid_tickers = []
+        for ticker in tickers:
+            if ticker not in self.tickers:
+                self._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker))
+            else:
+                valid_tickers.append(ticker)
+        if len(valid_tickers) == 0:
+            self._print_issue('ERROR', 'No input ticker in self.tickers.')
+            return
+        imag_model = self.copy_model()
+        break_values_dict = dict.fromkeys(valid_tickers)
+        current_values = dict.fromkeys(valid_tickers, None)
+        tolerances = dict.fromkeys(valid_tickers)
+        for ticker in valid_tickers:
+            break_values = [None, None]
+            if np.isnan(self.data[ticker].values[-1]):
+                value_index = -2
+            else:
+                value_index = -1
+            current_values[ticker] = self.data[ticker].values[value_index]
+            #create range:
+            deviation = .4
+            start_value = current_values[ticker] * (1 - deviation)
+            end_value = current_values[ticker] * (1 + deviation)
+            step_size = current_values[ticker] / 5000
+            rng = np.arange(start_value, end_value, step_size)
+            #start algorithm:
+            for value in rng:
+                imag_model.data[ticker].values[-1] = value
+                imag_model._init_model(do_print=False)
+                current_grad = imag_model.grad[ticker]
+                if np.sign(np.diff(current_grad)[-1]) > 0 and break_values[0] is None:
+                    break_values[0] = value
+                elif np.sign(np.diff(current_grad)[-2]) > 0 and break_values[1] is None:
+                    break_values[1] = value
+                if all(break_values):
+                    break_values_dict[ticker] = break_values
+            
+        self._print_issue('INFO', 'Break values: {}'.format(break_values_dict))
+
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
+    def _check_ticker_input(self, tickers):
+        if isinstance(tickers, str):
+            return [tickers]
+        elif isinstance(tickers, list):
+            return tickers
+        else:
+            raise TypeError('[ERROR]: Input of "tickers" must either be "str" or "list".')
+
     def _calc_ema(self, data, average_sample):
         '''
         Function to calculate the exponential moving average
@@ -201,7 +269,7 @@ penultimate one.')
         '''
         return data.ewm(span=average_sample, adjust=False).mean()
 
-    def _init_model(self, periods=(12, 26, 9)):
+    def _init_model(self, periods=(12, 26, 9), *args, **kwargs):
         '''
         Function to set up the price model. The idea is to locate the inflection
         points of the difference of "moving average converging diverging (macd)"
@@ -220,14 +288,20 @@ penultimate one.')
             - local_max: Sell prices
             - grad: "gradient" of the model (optionally)
         '''
-        self._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers))
+        try:
+            do_print = kwargs['do_print']
+        except KeyError:
+            do_print = True
+        self._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers), \
+                          do_print=do_print)
         macd = self._calc_ema(self.data, periods[0]) - \
                self._calc_ema(self.data, periods[1])
         signal_line = self._calc_ema(macd, periods[2])
         grad = np.gradient(macd - signal_line)
         local_min, local_max, grad_dict = {}, {}, {}
         if isinstance(grad, list):
-            self._print_issue('WARNING', 'Ignoring second entry of gradient!')
+            self._print_issue('WARNING', 'Ignoring second entry of gradient!', \
+                              do_print=do_print)
             grad = grad[0].T
             for n in range(grad.shape[0]):
                 local_min[self.tickers[n]] = argrelextrema(grad[n], np.less)
@@ -245,8 +319,10 @@ penultimate one.')
         self.local_min = local_min
         self.local_max = local_max
         self.grad = grad_dict
-        self._print_issue('INIT', 'Successfully initialized model.')
-        self._print_issue(None, '*' * 82)
+        self._print_issue('INIT', 'Successfully initialized model.', \
+                          do_print=do_print)
+        self._print_issue(None, '*' * 82, \
+                          do_print=do_print)
 
     def _get_locs(self, ticker):
         buy_locs = self.local_min[ticker][0] + self.buy_delay
