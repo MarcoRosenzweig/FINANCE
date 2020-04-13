@@ -13,6 +13,7 @@ class MODEL():
         - buy_delay: delay between detecting signals and actual handling.
             default: 1
         - ticker_df: dictionaries of pandas DataFrame for each ticker.
+        -test
     '''
     def __init__(self, tickers, data=None, buy_delay=1):
         if isinstance(tickers, str):
@@ -28,7 +29,7 @@ class MODEL():
 
     def get_data(self, value='Close', filter_date_range=None, *args, **kwargs):
         '''
-        Function to get asset historical prices. 
+        Function to get asset historical prices.
         '''
         self.data = utils.download_data(tickers=self.tickers, \
                                         value=value, \
