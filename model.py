@@ -8,7 +8,11 @@ class MODEL():
     Simple model to trade stocks, cryptos etc.
     Initialization:
         - data: historical data of asset prices.
-        - local_min, local_max
+        - local_min, local_max, grad: key characterisitics which will be
+        set later.
+        - buy_delay: delay between detecting signals and actual handling.
+            default: 1
+        - ticker_df: dictionaries of pandas DataFrame for each ticker.
     '''
     def __init__(self, tickers, data=None, buy_delay=1):
         if isinstance(tickers, str):
