@@ -21,6 +21,8 @@ class MODEL():
         self.local_min, self.local_max, self.grad = None, None, None
         self.buy_delay = buy_delay
         self.ticker_df = dict.fromkeys(self.tickers)
+        self.break_values = None
+        self.tolerances = None
 
     def get_data(self, value='Close', filter_date_range=None, *args, **kwargs):
         '''
@@ -203,7 +205,9 @@ to the original data. Modified DataFrame will be returned.')
                 self._print_issue('ERROR', 'Answer with "y" or "n".')
         self._print_issue('INFO', 'NaN values were append.')
 
-    def comp_break_values(self, tickers='all'):
+    def comp_break_values(self, tickers='all', *args, **kwargs):
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+
         if tickers == 'all':
             tickers = self.tickers
         else:
@@ -211,16 +215,22 @@ to the original data. Modified DataFrame will be returned.')
         valid_tickers = []
         for ticker in tickers:
             if ticker not in self.tickers:
-                self._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker))
+                self._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker), \
+                                  do_print=do_print)
             else:
                 valid_tickers.append(ticker)
         if len(valid_tickers) == 0:
-            self._print_issue('ERROR', 'No input ticker in self.tickers.')
+            self._print_issue('ERROR', 'No input ticker in self.tickers.', \
+                              do_print=do_print)
             return
         imag_model = self.copy_model()
         break_values_dict = dict.fromkeys(valid_tickers)
         current_values = dict.fromkeys(valid_tickers, None)
         tolerances = dict.fromkeys(valid_tickers)
+        deviation = .3
+        self._print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation), \
+                          do_print=do_print)
+
         for ticker in valid_tickers:
             break_values = [None, None]
             if np.isnan(self.data[ticker].values[-1]):
@@ -229,7 +239,6 @@ to the original data. Modified DataFrame will be returned.')
                 value_index = -1
             current_values[ticker] = self.data[ticker].values[value_index]
             #create range:
-            deviation = .4
             start_value = current_values[ticker] * (1 - deviation)
             end_value = current_values[ticker] * (1 + deviation)
             step_size = current_values[ticker] / 5000
@@ -245,11 +254,24 @@ to the original data. Modified DataFrame will be returned.')
                     break_values[1] = value
                 if all(break_values):
                     break_values_dict[ticker] = break_values
+                    break
             tolerances[ticker] = current_values[ticker] - break_values
 
-        print(tolerances)
-
-        self._print_issue('INFO', 'Break values: {}'.format(break_values_dict))
+        self.tolerances = tolerances
+        self.break_values = break_values_dict
+        input_message = 'Append breaking values w.r.t smallest tolerances? '
+        if self._get_answer(input_message=input_message):
+            for ticker in valid_tickers:
+                smal_tol = np.argsort(tolerances[ticker])[0]
+                self.data[ticker][-1] = break_values_dict[ticker][smal_tol]
+                self._init_model(do_print=False)
+        else:
+            self._print_issue('INFO', 'Current values: {}'.format(current_values), \
+                              do_print=do_print)
+            self._print_issue('INFO', 'Break values: {}'.format(break_values_dict), \
+                              do_print=do_print)
+            self._print_issue('INFO', 'Tolerances: {}'.format(tolerances), \
+                              do_print=do_print)
 
 ###############################################################################
 #   INTERNAL FUNCTIONS
@@ -291,10 +313,8 @@ to the original data. Modified DataFrame will be returned.')
             - local_max: Sell prices
             - grad: "gradient" of the model (optionally)
         '''
-        try:
-            do_print = kwargs['do_print']
-        except KeyError:
-            do_print = True
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+
         self._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers), \
                           do_print=do_print)
         macd = self._calc_ema(self.data, periods[0]) - \
@@ -349,6 +369,23 @@ to the original data. Modified DataFrame will be returned.')
 ###############################################################################
 #   USEFUL FUNCTIONS
 ###############################################################################
+    def _get_answer(self, input_message, possibilities=['y', 'n']):
+        answer = ''
+        while answer not in possibilities:
+            answer = input('[USER INPUT]: {}'.format(input_message))
+            if answer == 'y':
+                return True
+            elif answer == 'n':
+                return False
+            else:
+                self._print_issue('ERROR', 'Possible answers: {}.'.format(possibilities))
+
+    def _parse_kwargs(self, key, kwargs, error_arg=False):
+        try:
+            return kwargs[key]
+        except KeyError:
+            return error_arg
+
     def _print_issue(self, key, issue, do_print=True):
         if do_print:
             if key is not None:
