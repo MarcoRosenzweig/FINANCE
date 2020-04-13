@@ -1,3 +1,3 @@
 # FINANCE
 Easy tools for trading stocks and cryptos.
-Version 0.2
+Object Oriented Programming.
