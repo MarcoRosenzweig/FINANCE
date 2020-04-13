@@ -245,7 +245,10 @@ to the original data. Modified DataFrame will be returned.')
                     break_values[1] = value
                 if all(break_values):
                     break_values_dict[ticker] = break_values
-            
+            tolerances[ticker] = current_values[ticker] - break_values
+
+        print(tolerances)
+
         self._print_issue('INFO', 'Break values: {}'.format(break_values_dict))
 
 ###############################################################################
