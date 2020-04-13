@@ -62,7 +62,7 @@ class MODEL():
             self.data = filtered_data
             self._print_issue('INFO', 'filter applied.')
 
-    def eval_model(self, entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
+    def eval_model(self, tickers='all', entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
         '''
         Function to evaluate the price model predictions
         Inputs:
@@ -80,8 +80,13 @@ class MODEL():
             - net_income: Net Income/win after entry_money (and possibly tax) subtracted
             - df_return: model evaluation as pandas DataFrame
         '''
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        if tickers == 'all':
+            valid_tickers = self.tickers
+        else:
+            valid_tickers = self._check_ticker_input(tickers=tickers)
 
-        utils.print_opening(ticker=self.tickers, \
+        utils.print_opening(ticker=valid_tickers, \
                             start_date=self.data.index[0].strftime('%D'), \
                             end_date=self.data.index[-1].strftime('%D'), \
                             initial_investment_per_ticker=entry_money, \
@@ -90,7 +95,7 @@ class MODEL():
         if any([self.local_min is None, self.local_max is None, self.grad is None]):
             self._init_model()
 
-        for ticker in self.tickers:
+        for ticker in valid_tickers:
             self._print_issue('TICKER', ticker)
 
             buy_locs, sell_locs = self._get_locs(ticker=ticker)
@@ -207,22 +212,11 @@ to the original data. Modified DataFrame will be returned.')
 
     def comp_break_values(self, tickers='all', *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
-
         if tickers == 'all':
             tickers = self.tickers
         else:
-            tickers = self._check_ticker_input(tickers=tickers)
-        valid_tickers = []
-        for ticker in tickers:
-            if ticker not in self.tickers:
-                self._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker), \
-                                  do_print=do_print)
-            else:
-                valid_tickers.append(ticker)
-        if len(valid_tickers) == 0:
-            self._print_issue('ERROR', 'No input ticker in self.tickers.', \
-                              do_print=do_print)
-            return
+            valid_tickers = self._check_ticker_input(tickers=tickers)
+        print(valid_tickers)
         imag_model = self.copy_model()
         break_values_dict = dict.fromkeys(valid_tickers)
         current_values = dict.fromkeys(valid_tickers, None)
@@ -276,14 +270,6 @@ to the original data. Modified DataFrame will be returned.')
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
-    def _check_ticker_input(self, tickers):
-        if isinstance(tickers, str):
-            return [tickers]
-        elif isinstance(tickers, list):
-            return tickers
-        else:
-            raise TypeError('[ERROR]: Input of "tickers" must either be "str" or "list".')
-
     def _calc_ema(self, data, average_sample):
         '''
         Function to calculate the exponential moving average
@@ -369,6 +355,24 @@ to the original data. Modified DataFrame will be returned.')
 ###############################################################################
 #   USEFUL FUNCTIONS
 ###############################################################################
+    def _check_ticker_input(self, tickers, do_print=True):
+        if isinstance(tickers, str):
+            tickers = [tickers]
+        elif isinstance(tickers, list):
+            tickers = tickers
+        else:
+            raise TypeError('[ERROR]: Input of "tickers" must either be "str" or "list".')
+        valid_tickers = []
+        for ticker in tickers:
+            if ticker not in self.tickers:
+                self._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker), \
+                                  do_print=do_print)
+            else:
+                valid_tickers.append(ticker)
+        if len(valid_tickers) == 0:
+            raise OSError('[DEPP]: No input ticker in self.tickers.')
+        return valid_tickers
+
     def _get_answer(self, input_message, possibilities=['y', 'n']):
         answer = ''
         while answer not in possibilities:
