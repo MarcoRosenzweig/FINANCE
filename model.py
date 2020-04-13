@@ -8,7 +8,7 @@ class MODEL():
     Simple model to trade stocks, cryptos etc.
     Initialization:
         - data: historical data of asset prices.
-        - buy_locs, sell_locs: locations for buy and sell signals.
+        - local_min, local_max
     '''
     def __init__(self, tickers, data=None, buy_delay=1):
         if isinstance(tickers, str):
