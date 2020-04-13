@@ -216,7 +216,6 @@ to the original data. Modified DataFrame will be returned.')
             tickers = self.tickers
         else:
             valid_tickers = self._check_ticker_input(tickers=tickers)
-        print(valid_tickers)
         imag_model = self.copy_model()
         break_values_dict = dict.fromkeys(valid_tickers)
         current_values = dict.fromkeys(valid_tickers, None)
@@ -362,6 +361,10 @@ to the original data. Modified DataFrame will be returned.')
             tickers = tickers
         else:
             raise TypeError('[ERROR]: Input of "tickers" must either be "str" or "list".')
+
+        if not hasattr(self, 'tickers'):
+            return tickers
+
         valid_tickers = []
         for ticker in tickers:
             if ticker not in self.tickers:
