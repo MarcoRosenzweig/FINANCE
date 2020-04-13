@@ -11,12 +11,12 @@ class MODEL():
         - buy_locs, sell_locs: locations for buy and sell signals.
     '''
     def __init__(self, tickers, data=None, buy_delay=1):
-        if not any([isinstance(tickers, list), isinstance(tickers, str)]):
-            raise TypeError('[ERROR]: Input of "tickers" must either be str or list.')
         if isinstance(tickers, str):
             self.tickers = [tickers]
-        else:
+        elif isinstance(tickers, list):
             self.tickers = tickers
+        else:
+            raise TypeError('[ERROR]: Input of "tickers" must either be str or list.')
         self.data = data
         self.local_min, self.local_max, self.grad = None, None, None
         self.buy_delay = buy_delay
@@ -32,10 +32,30 @@ class MODEL():
 
     def apply_date_filter(self, filter_date_range):
         try:
-            self.data = self.data.reindex(filter_date_range)
-            self._print_issue('INFO', 'filter applied.')
+            filtered_data = self.data.reindex(filter_date_range)
         except KeyError:
             self._print_issue('WARNING', 'filter not in data.')
+            return
+        else:
+            #1 index is ticker, 0 index is data
+            nan_values = np.where(np.isnan(filtered_data))[0]
+            n_nan_values = nan_values.size
+            if  n_nan_values > 0:
+                self._print_issue('WARNING', 'Filter would result in {} NaN values.'\
+.format(n_nan_values))
+                answer = ''
+                while answer not in ['y', 'n']:
+                    answer = input('[USER-INPUT]: Remove NaN values? [y/n]:')
+                    if answer == 'y':
+                        force_filter = True
+                    elif answer == 'n':
+                        force_filter = False
+                    else:
+                        self._print_issue('ERROR', 'Answer with "y" or "n".')
+                if force_filter:
+                    filtered_data = filtered_data.dropna()
+            self.data = filtered_data
+            self._print_issue('INFO', 'filter applied.')
 
 
     def eval_model(self, entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
@@ -56,6 +76,7 @@ class MODEL():
             - net_income: Net Income/win after entry_money (and possibly tax) subtracted
             - df_return: model evaluation as pandas DataFrame
         '''
+
         utils.print_opening(ticker=self.tickers, \
                             start_date=self.data.index[0].strftime('%D'), \
                             end_date=self.data.index[-1].strftime('%D'), \
@@ -65,28 +86,10 @@ class MODEL():
         if any([self.local_min is None, self.local_max is None, self.grad is None]):
             self._init_model()
 
-#        buy_locs = dict.fromkeys(self.tickers)
-#        sell_locs = dict.fromkeys(self.tickers)
-
         for ticker in self.tickers:
             self._print_issue('TICKER', ticker)
-            buy_locs = self.local_min[ticker][0] + self.buy_delay
-            sell_locs = self.local_max[ticker][0] + self.buy_delay
-            try:
-                if buy_locs[0] > sell_locs[0]:
-                    sell_locs = sell_locs[1:]
-            except IndexError:
-                self._print_issue('INFO', 'First sell position will not be displayed.')
-            #check locs:
-            if buy_locs.shape[0] > sell_locs.shape[0]:
-                self._print_issue('INFO', 'Open position.')
-            elif buy_locs.shape[0] < sell_locs.shape[0]:
-                try:
-                    sell_locs[0] = buy_locs[0]
-                except IndexError:
-                    self._print_issue('INFO', 'No buy locations occured.\
-Sell locations are set to buy locations.')
-                    sell_locs = buy_locs
+
+            buy_locs, sell_locs = self._get_locs(ticker=ticker)
 
             buy_prices = self.data[ticker][buy_locs]
             buy_dates = self.data[ticker].index.values[buy_locs]
@@ -177,7 +180,6 @@ penultimate one.')
             self._print_issue('SUMMARY', \
                               'NET WIN: {:.2f}'.format(net_income))
             self._print_issue(None, '='*82)
-
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
@@ -210,21 +212,21 @@ penultimate one.')
             - local_max: Sell prices
             - grad: "gradient" of the model (optionally)
         '''
+        self._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers))
         macd = self._calc_ema(self.data, periods[0]) - \
                self._calc_ema(self.data, periods[1])
         signal_line = self._calc_ema(macd, periods[2])
         grad = np.gradient(macd - signal_line)
-        grad_dict = dict.fromkeys(self.tickers)
+        local_min, local_max, grad_dict = {}, {}, {}
         if isinstance(grad, list):
-            local_min, local_max = {}, {}
             self._print_issue('WARNING', 'Ignoring second entry of gradient!')
             grad = grad[0].T
             for n in range(grad.shape[0]):
                 local_min[self.tickers[n]] = argrelextrema(grad[n], np.less)
                 local_max[self.tickers[n]] = argrelextrema(grad[n], np.greater)
         else:
-            local_min = argrelextrema(grad, np.less)[0]
-            local_max = argrelextrema(grad, np.greater)[0]
+            local_min[self.tickers[0]] = argrelextrema(grad, np.less)[0]
+            local_max[self.tickers[0]] = argrelextrema(grad, np.greater)[0]
         #transforming grad as dict
         if len(grad.shape) == 1:
             grad_dict[self.tickers[0]] = grad
@@ -235,7 +237,28 @@ penultimate one.')
         self.local_min = local_min
         self.local_max = local_max
         self.grad = grad_dict
+        self._print_issue('INIT', 'Successfully initialized model.')
+        self._print_issue(None, '*' * 82)
 
+    def _get_locs(self, ticker):
+        buy_locs = self.local_min[ticker][0] + self.buy_delay
+        sell_locs = self.local_max[ticker][0] + self.buy_delay
+        try:
+            if buy_locs[0] > sell_locs[0]:
+                sell_locs = sell_locs[1:]
+        except IndexError:
+            self._print_issue('INFO', 'First sell position will not be displayed.')
+        #check locs:
+        if buy_locs.shape[0] > sell_locs.shape[0]:
+            self._print_issue('INFO', 'Open position.')
+        elif buy_locs.shape[0] < sell_locs.shape[0]:
+            try:
+                sell_locs[0] = buy_locs[0]
+            except IndexError:
+                self._print_issue('INFO', 'No buy locations occured.\
+    Sell locations are set to buy locations.')
+                sell_locs = buy_locs
+        return buy_locs, sell_locs
 ###############################################################################
 #   USEFUL FUNCTIONS
 ###############################################################################
