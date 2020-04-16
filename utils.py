@@ -80,3 +80,31 @@ def _format_string(string, center_alligned=True):
     if center_alligned:
         string = string.center(80)
     return '{}{}{}'.format(special_char, string, special_char)
+
+def check_ticker_input(tickers_input, tickers_avail, do_print=True):
+    if isinstance(tickers_input, str):
+        tickers_input = [tickers_input]
+    elif isinstance(tickers_input, list):
+        tickers_input = tickers_input
+    else:
+        raise TypeError('[ERROR]: Input of "tickers_input" must either be \
+"str" or "list".')
+    if tickers_avail is None:
+        return tickers_input
+    valid_tickers = []
+    for ticker in tickers_input:
+        if ticker not in tickers_avail:
+            _print_issue('WARNING', 'Ticker "{}" not in available \
+tickers'.format(ticker), do_print=do_print)
+        else:
+            valid_tickers.append(ticker)
+    if len(valid_tickers) == 0:
+        raise OSError('[DEPP]: No input ticker in self.tickers.')
+    return valid_tickers
+
+def _print_issue(key, issue, do_print=True):
+    if do_print:
+        if key is not None:
+            print('[{}]: {}'.format(key, issue))
+        else:
+            print('{}'.format(issue))
