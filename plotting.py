@@ -67,4 +67,6 @@ def plot_model(model, tickers='all', plot_range=None, savefig=None):
                    color='r', linestyle='--', label='Sell dates')
         plt.legend()
         plt.grid()
-        plt.show()
+
+        return ax1, ax2
+        #plt.show()
