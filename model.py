@@ -26,6 +26,7 @@ class MODEL():
         self.ticker_df = dict.fromkeys(self.tickers)
         self.break_values = None
         self.tolerances = None
+        self.z_values = dict.fromkeys(self.tickers)
 
     def get_data(self, value='Close', filter_date_range=None, *args, **kwargs):
         '''
@@ -308,13 +309,13 @@ to the original data. Modified DataFrame will be returned.')
             bottom_value = self.break_values[ticker][arg[0]]
             top_value = self.break_values[ticker][arg[1]]
             middle_value = None
-            if  self.data[ticker][last_value_index] < top_value:
-                if self.data[ticker][last_value_index] > bottom_value:
-                    middle_value = (top_value - bottom_value)*.5 + bottom_value
+            #if  self.data[ticker][last_value_index] < top_value:
+            #    if self.data[ticker][last_value_index] > bottom_value:
+            middle_value = (top_value - bottom_value)*.5 + bottom_value
             bottom_value *= (1 - deviation)
             top_value *= (1 + deviation)
-            test_values = [value for value in [bottom_value, middle_value, \
-                                                top_value] if value is not None]
+            #test_values = [value for value in [bottom_value, middle_value, \
+            #                                    top_value] if value is not None]
             for value in test_values:
                 #create an imag_model:
                 test_model = self.copy_model()
@@ -463,9 +464,8 @@ to the original data. Modified DataFrame will be returned.')
         except KeyError:
             return error_arg
 
-    def _print_issue(self, key, issue, do_print=True):
-        if do_print:
-            if key is not None:
-                print('[{}]: {}'.format(key, issue))
-            else:
-                print('{}'.format(issue))
+class STATISTICAL_MODEL(MODEL):
+    """docstring for STATISTICAL_MODEL."""
+
+    def __init__(self, model):
+        pass
