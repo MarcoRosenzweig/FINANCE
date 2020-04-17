@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
 import copy
+import plotting
 
 class MODEL():
     '''
@@ -92,20 +93,20 @@ class MODEL():
             valid_tickers = utils.check_ticker_input(tickers_input=tickers, \
                                                      tickers_avail=self.tickers, \
                                                      do_print=True)
+
         utils.print_opening(ticker=valid_tickers, \
                             start_date=self.data.index[0].strftime('%D'), \
                             end_date=self.data.index[-1].strftime('%D'), \
                             initial_investment_per_ticker=entry_money, \
-                            do_print=True)
+                            do_print=do_print)
 
         if any([self.local_min is None, self.local_max is None, self.grad is None]):
             self._init_model()
 
         for ticker in valid_tickers:
-            utils._print_issue('TICKER', ticker)
-
-            buy_locs, sell_locs = self._get_locs(ticker=ticker)
-
+            utils._print_issue('TICKER', ticker, do_print=do_print)
+            buy_locs, sell_locs = self._get_locs(ticker=ticker, \
+                                                 do_print=do_print)
             buy_prices = self.data[ticker][buy_locs]
             buy_dates = self.data[ticker].index.values[buy_locs]
             sell_prices = self.data[ticker][sell_locs]
@@ -153,22 +154,23 @@ class MODEL():
             average_loss = np.mean(win_loss[np.where(win_loss < 0)])
             if np.sum(trade_wins) > 800:
                 tax_pays = np.sum(trade_wins) * tax
-                utils._print_issue('INFO', '{:.2f} tax was paid.'.format(tax_pays))
+                utils._print_issue('INFO', '{:.2f} tax was paid.'.format(tax_pays), \
+                                   do_print=do_print)
                 net_income = (trade_rewards[-1] - entry_money) * (1 - tax)
             else:
-                utils._print_issue('INFO', 'No tax paid.')
+                utils._print_issue('INFO', 'No tax paid.', \
+                                   do_print=do_print)
                 net_income = np.sum(trade_wins)
             #create final DataFrame
             #be aware that buy_dates can be 1 entry longer then sell dates!
             if buy_dates.shape[0] > sell_dates.shape[0]:
                 if sell_dates.shape[0] > 0:
                     utils._print_issue('INFO', 'Last entry of "Sell Dates" will \
-be assigned equally as the \
-penultimate one.')
+be assigned equally as the penultimate one.', do_print=do_print)
                     sell_dates = np.append(sell_dates, sell_dates[-1])
                 else:
                     utils._print_issue('INFO', 'First entry of "Sell Dates" \
-                                       will be first entry of "Buy Dates".')
+will be first entry of "Buy Dates".', do_print=do_print)
                     sell_dates = buy_dates[0]
                 try:
                     sell_prices.loc[pd.Timestamp.max] = np.nan
@@ -187,14 +189,18 @@ penultimate one.')
             self.ticker_df[ticker] = final_df
             utils._print_issue(None, '-'*82)
             utils._print_issue('SUMMARY', \
-                              'Average trade win: {:.10%}'.format(average_win))
+                               'Average trade win: {:.10%}'.format(average_win), \
+                               do_print=do_print)
             utils._print_issue('SUMMARY', \
-                              'Average trade loss: {:.10%}'.format(average_loss))
+                               'Average trade loss: {:.10%}'.format(average_loss), \
+                               do_print=do_print)
             utils._print_issue('SUMMARY', \
-                              'Efficiency: {:.2%}'.format(efficiency))
+                               'Efficiency: {:.2%}'.format(efficiency), \
+                               do_print=do_print)
             utils._print_issue('SUMMARY', \
-                              'NET WIN: {:.2f}'.format(net_income))
-            utils._print_issue(None, '='*82)
+                               'NET WIN: {:.2f}'.format(net_income), \
+                               do_print=do_print)
+            utils._print_issue(None, '=' * 82, do_print=do_print)
 
     def copy_model(self):
         return copy.deepcopy(self)
@@ -216,7 +222,7 @@ to the original data. Modified DataFrame will be returned.')
                 utils._print_issue('ERROR', 'Answer with "y" or "n".')
         utils._print_issue('INFO', 'NaN values were append.')
 
-    def comp_break_values(self, tickers='all', *args, **kwargs):
+    def comp_break_values(self, tickers='all', refactor_step_size=1, *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
@@ -242,7 +248,7 @@ to the original data. Modified DataFrame will be returned.')
             #create range:
             start_value = current_values[ticker] * (1 - deviation)
             end_value = current_values[ticker] * (1 + deviation)
-            step_size = current_values[ticker] / 5000
+            step_size = (current_values[ticker] / 5000) * refactor_step_size
             rng = np.arange(start_value, end_value, step_size)
             #start algorithm:
             for value in rng:
@@ -256,7 +262,7 @@ to the original data. Modified DataFrame will be returned.')
                 if all(break_values):
                     break_values_dict[ticker] = break_values
                     break
-            tolerances[ticker] = current_values[ticker] - break_values
+            tolerances[ticker] = break_values - current_values[ticker]
 
         self.tolerances = tolerances
         self.break_values = break_values_dict
@@ -274,6 +280,52 @@ to the original data. Modified DataFrame will be returned.')
             utils._print_issue('INFO', 'Tolerances: {}'.format(tolerances), \
                               do_print=do_print)
 
+    def show_possibilities(self, tickers='all', plot_range=None, generic_value=None):
+        if tickers == 'all':
+            tickers = self.tickers
+        else:
+            tickers = utils.check_ticker_input(tickers_input=tickers, \
+                                               tickers_avail=self.tickers, \
+                                               do_print=True)
+        for ticker in tickers:
+            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
+            #check if last value is nan:
+            last_value_index = -1
+            if not np.isnan(self.data[ticker][last_value_index]):
+                utils._print_issue('WARNING', 'Last value of data set is not NaN!')
+                input_message = 'Proceed anyways? '
+                if not self._get_answer(input_message=input_message, \
+                                        possibilities=['y', 'n']):
+                    continue
+            else:
+                last_value_index = -2
+            if self.break_values[ticker] is None and generic_value is None:
+                utils._print_issue('ERROR', 'No break values computed for this ticker!')
+                continue
+
+            arg = np.argsort(self.tolerances[ticker])
+            deviation = 0.05
+            bottom_value = self.break_values[ticker][arg[0]]
+            top_value = self.break_values[ticker][arg[1]]
+            middle_value = None
+            if  self.data[ticker][last_value_index] < top_value:
+                if self.data[ticker][last_value_index] > bottom_value:
+                    middle_value = (top_value - bottom_value)*.5 + bottom_value
+            bottom_value *= (1 - deviation)
+            top_value *= (1 + deviation)
+            test_values = [value for value in [bottom_value, middle_value, \
+                                                top_value] if value is not None]
+            for value in test_values:
+                #create an imag_model:
+                test_model = self.copy_model()
+                #assign the value to the last entry:
+                test_model.data[ticker][-1] = value
+                #init model
+                test_model._init_model(do_print=False)
+                test_model.eval_model(do_print=False)
+                ax1, ax2 = plotting.plot_model(test_model, tickers=ticker, \
+                                               plot_range=plot_range, \
+                                               plot_break_values=True)
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
@@ -344,8 +396,8 @@ to the original data. Modified DataFrame will be returned.')
         utils._print_issue(None, '*' * 82, \
                           do_print=do_print)
 
-    def _get_locs(self, ticker):
-        #if self.local_min[ticker][0].size > 1:
+    def _get_locs(self, ticker, *args, **kwargs):
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         if len(self.local_min) > 1:
             buy_locs = self.local_min[ticker][0] + self.buy_delay
             sell_locs = self.local_max[ticker][0] + self.buy_delay
@@ -356,16 +408,17 @@ to the original data. Modified DataFrame will be returned.')
             if buy_locs[0] > sell_locs[0]:
                 sell_locs = sell_locs[1:]
         except IndexError:
-            utils._print_issue('INFO', 'First sell position will not be displayed.')
+            utils._print_issue('INFO', 'First sell position will not be displayed.', \
+                               do_print=do_print)
         #check locs:
         if buy_locs.shape[0] > sell_locs.shape[0]:
-            utils._print_issue('INFO', 'Open position.')
+            utils._print_issue('INFO', 'Open position.', do_print=do_print)
         elif buy_locs.shape[0] < sell_locs.shape[0]:
             try:
                 sell_locs[0] = buy_locs[0]
             except IndexError:
                 utils._print_issue('INFO', 'No buy locations occured.\
-    Sell locations are set to buy locations.')
+    Sell locations are set to buy locations.', do_print=do_print)
                 sell_locs = buy_locs
         return buy_locs, sell_locs
 ###############################################################################

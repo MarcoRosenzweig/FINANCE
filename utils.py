@@ -1,7 +1,7 @@
 import yfinance as yf
 import pandas as pd
 
-def download_data(value=None, *args, **kwargs):
+def download_data(value='Close', *args, **kwargs):
     '''
     Function to get historical asset data of yahoo finance.
     Inputs:

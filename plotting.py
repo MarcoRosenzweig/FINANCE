@@ -4,14 +4,19 @@ register_matplotlib_converters()
 import utils
 import numpy as np
 
-def plot_model(model, tickers='all', plot_range=None, savefig=None):
+def plot_model(model, tickers='all', plot_range=None, plot_break_values=True, \
+               *args, **kwargs):
+
     '''
     Function to plot a model.
     Inputs:
         - model: model of class MODEL
-        - start:
-        - grad: "gradient" of price model
-        - locs: "locations" of price model
+        - tickers: tickers to plot
+            default: all, i.e. tickers in input class MODEL
+        - plot_range: range to plot of type pandas.date_range()
+            defualt: None, i.e. complete data set
+        - plot_break_values: if available, plot break_values of input class MODEL
+            default: True
     '''
     if tickers=='all':
         tickers = model.tickers
@@ -47,17 +52,28 @@ def plot_model(model, tickers='all', plot_range=None, savefig=None):
         plt.vlines(model.data[ticker].index[local_max], \
                    np.min(grad), np.max(grad), \
                    color='r', label='Peak Reached')
-        plt.legend()
+        try:
+            plt.title(ticker, kwargs['title'])
+        except KeyError:
+            plt.title(ticker, fontsize=14)
+        plt.legend(loc='upper left')
         plt.grid()
         #subplot 2:
         ax2 = plt.subplot(2, 1, 2, sharex=ax1)
         price = model.data[ticker][indices]
         try:
-            buy_dates = model.ticker_df[ticker]['Buy Dates'].values[max_arg[0]]
+            buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[0]]
+        except IndexError:
+            utils._print_issue('INFO', 'New buy signal was detected for last value: {}.'.format(model.data[ticker][-1]))
+            buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[0][:-1]]
+            buy_dates = np.hstack((buy_dates, model.data[ticker].index[local_min[-1] + 1].to_numpy()))
+        try:
             sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[0]]
         except IndexError:
-            buy_dates = model.ticker_df[ticker]['Buy Dates'].values[max_arg[0][:-1]]
+            utils._print_issue('INFO', 'New sell signal was detected for last value: {}.'.format(model.data[ticker][-1]))
             sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[0][:-1]]
+            sell_dates = np.hstack((sell_dates, model.data[ticker].index[local_max[-1] + 1].to_numpy()))
+
         plt.plot(x_axis, price, \
                  label='{} price'.format(ticker))
         plt.vlines(buy_dates, np.min(price), np.max(price), \
@@ -65,8 +81,14 @@ def plot_model(model, tickers='all', plot_range=None, savefig=None):
         plt.vlines(sell_dates, \
                    np.min(price), np.max(price), \
                    color='r', linestyle='--', label='Sell dates')
-        plt.legend()
-        plt.grid()
+        if plot_break_values:
+            if model.break_values is not None:
+                plt.hlines(model.break_values[ticker][0], x_axis[0], x_axis[-1], \
+                           color='k', label='Break value w.r.t today')
+                plt.hlines(model.break_values[ticker][1], x_axis[0], x_axis[-1], \
+                           color='c', label='Break value w.r.t yesterday')
 
+        plt.legend(loc='upper left')
+        plt.grid()
         return ax1, ax2
         #plt.show()
