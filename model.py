@@ -257,18 +257,19 @@ will be first entry of "Buy Dates".', do_print=do_print)
         if tickers == 'all':
             tickers = self.tickers
         else:
-            valid_tickers = utils.check_ticker_input(tickers_input=tickers, \
+            tickers = utils.check_ticker_input(tickers_input=tickers, \
                                                      tickers_avail=self.tickers, \
                                                      do_print=True)
         imag_model = self.copy_model()
-        break_values_dict = dict.fromkeys(valid_tickers)
-        current_values = dict.fromkeys(valid_tickers, None)
-        tolerances = dict.fromkeys(valid_tickers)
+        break_values_dict = dict.fromkeys(tickers)
+        current_values = dict.fromkeys(tickers, None)
+        tolerances = dict.fromkeys(tickers)
         deviation = .3
         utils._print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation), \
                           do_print=do_print)
 
-        for ticker in valid_tickers:
+        for ticker in tickers:
+            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
             break_values = [None, None]
             if np.isnan(self.data[ticker].values[-1]):
                 value_index = -2
@@ -334,7 +335,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 continue
 
             arg = np.argsort(self.tolerances[ticker])
-            deviation = 0.05
+            deviation = self._parse_kwargs('deviation', kwargs, error_arg=.0125)
             bottom_value = self.break_values[ticker][arg[0]]
             top_value = self.break_values[ticker][arg[1]]
             middle_value = None
@@ -356,11 +357,11 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 p_range = self._parse_kwargs('plot_range', kwargs, None)
                 p_index = self._parse_kwargs('plot_from_index', kwargs, None)
                 p_date = self._parse_kwargs('plot_from_date', kwargs, None)
-                ax1, ax2 = plotting.plot_model(test_model, tickers=ticker, \
-                                               plot_range=p_range, \
-                                               plot_from_index=p_index, \
-                                               plot_from_date=p_date, \
-                                               plot_break_values=True)
+                plotting.plot_model(test_model, tickers=ticker, \
+                                    plot_range=p_range, \
+                                    plot_from_index=p_index, \
+                                    plot_from_date=p_date, \
+                                    plot_break_values=True)
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################

@@ -36,8 +36,7 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
         elif plot_from_date is not None:
             idx = model.data[ticker].index.get_loc(plot_from_date).start
             x_axis = model.data[ticker].index[idx:]
-            indices = np.arange(idx, \
-                                model.data[ticker].index.shape[0], 1)
+            indices = np.arange(idx, model.data[ticker].index.shape[0], 1)
         else:
             x_axis = model.data[ticker].index
             indices = np.arange(0, x_axis.shape[0], 1)
@@ -45,8 +44,15 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
         grad = model.grad[ticker][indices]
         min_arg = np.where(model.local_min[ticker] >= indices[0])
         max_arg = np.where(model.local_max[ticker] >= indices[0])
-        local_min = model.local_min[ticker][min_arg]
-        local_max = model.local_max[ticker][max_arg]
+        try:
+            local_min = model.local_min[ticker][min_arg]
+            local_max = model.local_max[ticker][max_arg]
+            in_loop = False
+        except TypeError:
+            #loop over tickers:
+            in_loop = True
+            local_min = model.local_min[ticker][0][min_arg[1]]
+            local_max = model.local_max[ticker][0][max_arg[1]]
 
         plt.figure(figsize=(16, 9))
         ax1 = plt.subplot(2, 1, 1)
@@ -73,15 +79,23 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
         price = model.data[ticker][indices]
         try:
             buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[0]]
+            if in_loop:
+                buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[1]]
         except IndexError:
             utils._print_issue('INFO', 'New buy signal was detected for last value: {}.'.format(model.data[ticker][-1]))
             buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[0][:-1]]
+            if in_loop:
+                buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[1][:-1]]
             buy_dates = np.hstack((buy_dates, model.data[ticker].index[local_min[-1] + 1].to_numpy()))
         try:
             sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[0]]
+            if in_loop:
+                sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[1]]
         except IndexError:
             utils._print_issue('INFO', 'New sell signal was detected for last value: {}.'.format(model.data[ticker][-1]))
             sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[0][:-1]]
+            if in_loop:
+                sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[1][:-1]]
             sell_dates = np.hstack((sell_dates, model.data[ticker].index[local_max[-1] + 1].to_numpy()))
 
         plt.plot(x_axis, price, \
@@ -100,5 +114,5 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
 
         plt.legend(loc='upper left')
         plt.grid()
-        return ax1, ax2
+        #return ax1, ax2
         #plt.show()

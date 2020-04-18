@@ -20,46 +20,44 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
         start = kwargs['start']
     except KeyError:
         start = None
-    z_values = _create_z_values(model=model, tickers=tickers, \
-                                stats_data=stats_data, timezone=timezone, \
-                                start=start, \
-                                auto_update_tolerances=auto_update_tolerances)
+    for ticker in tickers:
+        utils._print_issue(None, '=' * 80)
+        utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
+        z_values = _create_z_values(model=model, ticker=ticker, \
+                                    stats_data=stats_data, timezone=timezone, \
+                                    start=start, \
+                                    auto_update_tolerances=auto_update_tolerances)
 
-    freq_range, frequencies = _create_freq()
-    delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
-    delta_t = pd.Timedelta(delta_t).seconds / 3600
-    #plots:
-    fig = plt.figure(figsize=(16, 9))
-    ax1 = plt.subplot(211)
-    probs = (1 - ss.norm.cdf(z_values)) * 100
-    ax1.plot(frequencies, probs[0], label='Probability for smallest tolerance.')
-    plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
-    deg = 5
-    poly_line = np.poly1d(np.polyfit(freq_range, probs[0], deg))
-    ax1.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
-    ax1.invert_xaxis()
-    ax1.grid()
-    ax1.legend()
-    prob_small = poly_line(delta_t)
-    print('Probability for reaching smallest tolerance: {}%'.format(prob_small))
-    ax2 = plt.subplot(212, sharex=ax1)
-    ax2.plot(frequencies, probs[1], label='Probability for highest tolerance.')
-    plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
-    poly_line = np.poly1d(np.polyfit(freq_range, probs[1], deg))
-    ax2.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
-    ax2.grid()
-    ax2.legend()
-    prob_high = poly_line(delta_t)
-    print('Probability for reaching highest tolerance: {}%'.format(prob_high))
-    print('Probability between: {}%'.format(np.abs(prob_high - prob_small)))
+        freq_range, frequencies = _create_freq()
+        delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
+        delta_t = pd.Timedelta(delta_t).seconds / 3600
+        #plots:
+        fig = plt.figure(figsize=(16, 9))
+        ax1 = plt.subplot(211)
+        probs = (1 - ss.norm.cdf(z_values)) * 100
+        ax1.plot(frequencies, probs[0], label='Probability for smallest tolerance.')
+        plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
+        deg = 5
+        poly_line = np.poly1d(np.polyfit(freq_range, probs[0], deg))
+        ax1.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
+        ax1.invert_xaxis()
+        ax1.grid()
+        ax1.legend()
+        prob_small = poly_line(delta_t)
+        print('Probability for reaching smallest tolerance: {}%'.format(prob_small))
+        ax2 = plt.subplot(212, sharex=ax1)
+        ax2.plot(frequencies, probs[1], label='Probability for highest tolerance.')
+        plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
+        poly_line = np.poly1d(np.polyfit(freq_range, probs[1], deg))
+        ax2.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
+        ax2.grid()
+        ax2.legend()
+        prob_high = poly_line(delta_t)
+        print('Probability for reaching highest tolerance: {}%'.format(prob_high))
+        print('Probability between: {}%'.format(np.abs(prob_high - prob_small)))
 
-def _create_z_values(model, tickers='all', stats_data=None, \
+def _create_z_values(model, ticker, stats_data=None, \
                      auto_update_tolerances=False, *args, **kwargs):
-    if tickers == 'all':
-        tickers = model.tickers
-    else:
-        tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                           tickers_avail=model.tickers)
     freq_range, frequencies = _create_freq()
     try:
         timezone = kwargs['timezone']
@@ -69,27 +67,26 @@ def _create_z_values(model, tickers='all', stats_data=None, \
         start = kwargs['start']
     except KeyError:
         start = None
-    for ticker in tickers:
-        _, means, stds = _get_price_moves_and_stats(ticker=ticker, \
-                                                    stats_data=stats_data,
-                                                    timezone=timezone, \
-                                                    start=start)
-        if auto_update_tolerances:
-            utils._print_issue('INFO', 'Auto update of tolerances!')
-            current_value = utils.download_data(tickers=ticker, \
-                                                start=pd.Timestamp.today(), \
-                                                value='Close').values[-1]
-            current_tols = model.break_values[ticker] - current_value
-            utils._print_issue('INFO', 'Current value: {}!'.format(current_value))
-            utils._print_issue('INFO', 'New tolerances: {}!'.format(current_tols))
-            tol_unten = np.sort(current_tols)[0]
-            tol_oben = np.sort(current_tols)[1]
-        else:
-            tol_unten = np.sort(model.tolerances[ticker])[0]
-            tol_oben = np.sort(model.tolerances[ticker])[1]
-        z_values_unten = (tol_unten - means) / stds
-        z_values_oben = (tol_oben - means) / stds
-        return np.array([z_values_unten, z_values_oben])
+    _, means, stds = _get_price_moves_and_stats(ticker=ticker, \
+                                                stats_data=stats_data,
+                                                timezone=timezone, \
+                                                start=start)
+    if auto_update_tolerances:
+        utils._print_issue('INFO', 'Auto update of tolerances!')
+        current_value = utils.download_data(tickers=ticker, \
+                                            start=pd.Timestamp.today(), \
+                                            value='Close').values[-1]
+        current_tols = model.break_values[ticker] - current_value
+        utils._print_issue('INFO', 'Current value: {}!'.format(current_value))
+        utils._print_issue('INFO', 'New tolerances: {}!'.format(current_tols))
+        tol_unten = np.sort(current_tols)[0]
+        tol_oben = np.sort(current_tols)[1]
+    else:
+        tol_unten = np.sort(model.tolerances[ticker])[0]
+        tol_oben = np.sort(model.tolerances[ticker])[1]
+    z_values_unten = (tol_unten - means) / stds
+    z_values_oben = (tol_oben - means) / stds
+    return np.array([z_values_unten, z_values_oben])
 
 def _get_price_moves_and_stats(ticker, stats_data=None, \
                                timezone=None, start=None):
