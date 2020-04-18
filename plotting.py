@@ -4,7 +4,8 @@ register_matplotlib_converters()
 import utils
 import numpy as np
 
-def plot_model(model, tickers='all', plot_range=None, plot_break_values=True, \
+def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
+               plot_from_date=None, plot_break_values=True, \
                *args, **kwargs):
 
     '''
@@ -25,12 +26,21 @@ def plot_model(model, tickers='all', plot_range=None, plot_break_values=True, \
                                            tickers_avail=model.tickers, \
                                            do_print=True)
     for ticker in tickers:
-        if plot_range is None:
-            x_axis = model.data[ticker].index
-            indices = np.arange(0, x_axis.shape[0], 1)
-        else:
+        if plot_range is not None:
             x_axis = model.data[ticker][plot_range].index
             indices = np.where(np.isin(model.data[ticker].index, plot_range))[0]
+        elif plot_from_index is not None:
+            x_axis = model.data[ticker].index[plot_from_index:]
+            indices = np.arange(plot_from_index, \
+                                model.data[ticker].index.shape[0], 1)
+        elif plot_from_date is not None:
+            idx = model.data[ticker].index.get_loc(plot_from_date).start
+            x_axis = model.data[ticker].index[idx:]
+            indices = np.arange(idx, \
+                                model.data[ticker].index.shape[0], 1)
+        else:
+            x_axis = model.data[ticker].index
+            indices = np.arange(0, x_axis.shape[0], 1)
 
         grad = model.grad[ticker][indices]
         min_arg = np.where(model.local_min[ticker] >= indices[0])

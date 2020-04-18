@@ -42,6 +42,38 @@ class MODEL():
         if filter_date_range is not None:
             self.apply_date_filter(filter_date_range=filter_date_range)
 
+    def check_for_nan_values(self, tickers='all', exclude_last_value=True, \
+                             *args, **kwargs):
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        if tickers == 'all':
+            tickers = self.tickers
+        else:
+            tickers = utils.check_ticker_input(tickers_input=tickers, \
+                                               tickers_avail=self.tickers, \
+                                               do_print=True)
+        for ticker in tickers:
+            if exclude_last_value:
+                nan_indices = np.where(np.isnan(self.data[ticker][:-1]))[0]
+                valid_indices = np.where(np.isfinite(self.data[ticker][:-1]))[0]
+                valid_indices = np.hstack((valid_indices, self.data[ticker].shape[0] - 1))
+                filtered_data = self.data[ticker][valid_indices]
+                self.data[ticker] = filtered_data
+
+            else:
+                utils._print_issue('INFO', 'Last value is considered to be removed.', \
+                                    do_print=do_print)
+                nan_indices = np.where(np.isnan(self.data[ticker]))[0]
+            if nan_indices.size > 0:
+
+                #print(self.data[ticker].dropna())#[~np.isnan(self.data[ticker][:last_value_index])])
+                return
+                input_message = 'Remove {} NaN values? '.format(nan_indices.size)
+                if self._get_answer(input_message=input_message):
+                    self.data[ticker] = self.data[ticker][~nan_indices]
+            else:
+                utils._print_issue('INFO', 'No NaN values detected.', \
+                                    do_print=do_print)
+
     def apply_date_filter(self, filter_date_range):
         try:
             filtered_data = self.data.reindex(filter_date_range)
@@ -206,22 +238,19 @@ will be first entry of "Buy Dates".', do_print=do_print)
     def copy_model(self):
         return copy.deepcopy(self)
 
-    def append_timedelta(self, timedelta):
+    def append_timedelta(self, timedelta=1, *args, **kwargs):
+        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         new_entry = self.data.index[-1] + pd.Timedelta(days=timedelta)
-        idx = pd.date_range(start=self.data.index[0], end=new_entry)
+        final_entries = list(self.data.index)
+        final_entries.append(new_entry)
+        idx = pd.DatetimeIndex(final_entries)
         new_data = self.data.reindex(idx)
-        answer = ''
-        while answer not in ['y', 'n']:
-            answer = input('[USER-INPUT]: Overwrite existing data? [y/n]: ')
-            if answer == 'y':
-                self.data = new_data
-            elif answer == 'n':
-                utils._print_issue('INFO', 'No values were appended\
-to the original data. Modified DataFrame will be returned.')
-                return new_data
-            else:
-                utils._print_issue('ERROR', 'Answer with "y" or "n".')
-        utils._print_issue('INFO', 'NaN values were append.')
+
+        input_message = 'Overwrite existing data? '
+        if self._get_answer(input_message=input_message):
+            self.data = new_data
+        else:
+            return new_data
 
     def comp_break_values(self, tickers='all', refactor_step_size=1, *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
@@ -281,7 +310,7 @@ to the original data. Modified DataFrame will be returned.')
             utils._print_issue('INFO', 'Tolerances: {}'.format(tolerances), \
                               do_print=do_print)
 
-    def show_possibilities(self, tickers='all', plot_range=None, generic_value=None):
+    def show_possibilities(self, tickers='all', *args, **kwargs):
         if tickers == 'all':
             tickers = self.tickers
         else:
@@ -314,8 +343,8 @@ to the original data. Modified DataFrame will be returned.')
             middle_value = (top_value - bottom_value)*.5 + bottom_value
             bottom_value *= (1 - deviation)
             top_value *= (1 + deviation)
-            #test_values = [value for value in [bottom_value, middle_value, \
-            #                                    top_value] if value is not None]
+            test_values = [value for value in [bottom_value, middle_value, \
+                                               top_value] if value is not None]
             for value in test_values:
                 #create an imag_model:
                 test_model = self.copy_model()
@@ -324,8 +353,13 @@ to the original data. Modified DataFrame will be returned.')
                 #init model
                 test_model._init_model(do_print=False)
                 test_model.eval_model(do_print=False)
+                p_range = self._parse_kwargs('plot_range', kwargs, None)
+                p_index = self._parse_kwargs('plot_from_index', kwargs, None)
+                p_date = self._parse_kwargs('plot_from_date', kwargs, None)
                 ax1, ax2 = plotting.plot_model(test_model, tickers=ticker, \
-                                               plot_range=plot_range, \
+                                               plot_range=p_range, \
+                                               plot_from_index=p_index, \
+                                               plot_from_date=p_date, \
                                                plot_break_values=True)
 ###############################################################################
 #   INTERNAL FUNCTIONS

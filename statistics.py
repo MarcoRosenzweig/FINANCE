@@ -4,14 +4,26 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def calc_probs(model, time=None, tickers='all', stats_data=None, *args, **kwargs):
+def calc_probs(model, time=None, tickers='all', stats_data=None, \
+               auto_update_tolerances=False, *args, **kwargs):
+
     if tickers == 'all':
         tickers = model.tickers
     else:
         tickers = utils.check_ticker_input(tickers_input=tickers, \
                                            tickers_avail=model.tickers)
+    try:
+        timezone = kwargs['timezone']
+    except KeyError:
+        timezone = None
+    try:
+        start = kwargs['start']
+    except KeyError:
+        start = None
     z_values = _create_z_values(model=model, tickers=tickers, \
-                                stats_data=stats_data)
+                                stats_data=stats_data, timezone=timezone, \
+                                start=start, \
+                                auto_update_tolerances=auto_update_tolerances)
 
     freq_range, frequencies = _create_freq()
     delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
@@ -41,23 +53,48 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, *args, **kwargs
     print('Probability for reaching highest tolerance: {}%'.format(prob_high))
     print('Probability between: {}%'.format(np.abs(prob_high - prob_small)))
 
-def _create_z_values(model, tickers='all', stats_data=None):
+def _create_z_values(model, tickers='all', stats_data=None, \
+                     auto_update_tolerances=False, *args, **kwargs):
     if tickers == 'all':
         tickers = model.tickers
     else:
         tickers = utils.check_ticker_input(tickers_input=tickers, \
                                            tickers_avail=model.tickers)
     freq_range, frequencies = _create_freq()
+    try:
+        timezone = kwargs['timezone']
+    except KeyError:
+        timezone = None
+    try:
+        start = kwargs['start']
+    except KeyError:
+        start = None
     for ticker in tickers:
         _, means, stds = _get_price_moves_and_stats(ticker=ticker, \
-                                                    stats_data=stats_data)
-        tol_unten = np.sort(model.tolerances[ticker])[0]
-        tol_oben = np.sort(model.tolerances[ticker])[1]
+                                                    stats_data=stats_data,
+                                                    timezone=timezone, \
+                                                    start=start)
+        if auto_update_tolerances:
+            utils._print_issue('INFO', 'Auto update of tolerances!')
+            current_value = utils.download_data(tickers=ticker, \
+                                                start=pd.Timestamp.today(), \
+                                                value='Close').values[-1]
+            current_tols = model.break_values[ticker] - current_value
+            utils._print_issue('INFO', 'Current value: {}!'.format(current_value))
+            utils._print_issue('INFO', 'New tolerances: {}!'.format(current_tols))
+            tol_unten = np.sort(current_tols)[0]
+            tol_oben = np.sort(current_tols)[1]
+        else:
+            tol_unten = np.sort(model.tolerances[ticker])[0]
+            tol_oben = np.sort(model.tolerances[ticker])[1]
         z_values_unten = (tol_unten - means) / stds
         z_values_oben = (tol_oben - means) / stds
         return np.array([z_values_unten, z_values_oben])
 
-def _get_price_moves_and_stats(ticker, stats_data=None, start=None):
+def _get_price_moves_and_stats(ticker, stats_data=None, \
+                               timezone=None, start=None):
+    if timezone is None:
+        timezone = 'Europe/London'
     if start is None:
         start = pd.Timestamp(2019, 1, 1, 0)
     if stats_data is None:
@@ -71,7 +108,7 @@ def _get_price_moves_and_stats(ticker, stats_data=None, start=None):
     for index, freq in enumerate(frequencies):
         current_time = start
         current_rng = pd.date_range(start=current_time, end=pd.Timestamp.today(), \
-                                    freq=freq, tz='Europe/London', name='Datetime')
+                                    freq=freq, tz=timezone, name='Datetime')
         current_moves = np.diff(stats_data[current_rng])
         current_moves = current_moves[~np.isnan(current_moves)]
         means[index] = np.mean(current_moves)
