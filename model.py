@@ -44,6 +44,7 @@ class MODEL():
 
     def check_for_nan_values(self, tickers='all', exclude_last_value=True, \
                              *args, **kwargs):
+        #TODO: CODE THIS FUNCTION !
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
@@ -87,15 +88,8 @@ class MODEL():
             if  n_nan_values > 0:
                 utils._print_issue('WARNING', 'Filter would result in {} NaN values.'\
 .format(n_nan_values))
-                answer = ''
-                while answer not in ['y', 'n']:
-                    answer = input('[USER-INPUT]: Remove NaN values? [y/n]: ')
-                    if answer == 'y':
-                        force_filter = True
-                    elif answer == 'n':
-                        force_filter = False
-                    else:
-                        utils._print_issue('ERROR', 'Answer with "y" or "n".')
+                input_message = 'Remove NaN values?: '
+                force_filter = self._get_answer(input_message=input_message)
                 if force_filter:
                     filtered_data = filtered_data.dropna()
             self.data = filtered_data
@@ -325,8 +319,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
             if not np.isnan(self.data[ticker][last_value_index]):
                 utils._print_issue('WARNING', 'Last value of data set is not NaN!')
                 input_message = 'Proceed anyways? '
-                if not self._get_answer(input_message=input_message, \
-                                        possibilities=['y', 'n']):
+                if not self._get_answer(input_message=input_message):
                     continue
             else:
                 last_value_index = -2
@@ -490,7 +483,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
     def _get_answer(self, input_message, possibilities=['y', 'n']):
         answer = ''
         while answer not in possibilities:
-            answer = input('[USER INPUT]: {}'.format(input_message))
+            answer = input('[USER-INPUT]: {}'.format(input_message))
             if answer == 'y':
                 return True
             elif answer == 'n':
