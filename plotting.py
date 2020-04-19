@@ -107,9 +107,9 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
         if plot_break_values:
             if model.break_values is not None:
                 axs[ax_indices[1]].hlines(model.break_values[ticker][0], x_axis[0], x_axis[-1], \
-                           color='k', label='Break value w.r.t today')
+                           color='k', label='Break value {:.5f}'.format(model.break_values[ticker][0]))
                 axs[ax_indices[1]].hlines(model.break_values[ticker][1], x_axis[0], x_axis[-1], \
-                           color='c', label='Break value w.r.t yesterday')
+                           color='c', label='Break value {:.5f}'.format(model.break_values[ticker][1]))
         #layout:
         axs[ax_indices[1]].set_title('{} - PRICE'.format(ticker), fontsize='larger')
         axs[ax_indices[1]].set_ylabel('Price', fontsize='larger')

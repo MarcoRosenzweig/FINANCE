@@ -16,7 +16,7 @@ class MODEL():
             default: 1
         - ticker_df: dictionaries of pandas DataFrame for each ticker.
     '''
-    def __init__(self, tickers, data=None, buy_delay=1):
+    def __init__(self, tickers, data=None, buy_delay=1, periods=(12, 26, 9)):
         self.tickers = utils.check_ticker_input(tickers_input=tickers, \
                                                 tickers_avail=None, \
                                                 do_print=True)
@@ -27,6 +27,7 @@ class MODEL():
         self.break_values = None
         self.tolerances = None
         self.z_values = dict.fromkeys(self.tickers)
+        self.periods = periods
 
     def get_data(self, value='Close', filter_date_range=None, *args, **kwargs):
         '''
@@ -373,14 +374,14 @@ will be first entry of "Buy Dates".', do_print=do_print)
         '''
         return data.ewm(span=average_sample, adjust=False).mean()
 
-    def _init_model(self, periods=(12, 26, 9), *args, **kwargs):
+    def _init_model(self, *args, **kwargs):
         '''
         Function to set up the price model. The idea is to locate the inflection
         points of the difference of "moving average converging diverging (macd)"
         and "Signal Line (signal_line)". These indicate local up and down trends.
         The actual buy and sell prices are therefore the next day, i.e. buy_delay.
         Inputs:
-            - values_of_interest: days to calculate the macd (first two values)
+            - periods: days to calculate the macd (first two values)
             and Signal Line (last value).
                 default: 12, 26, 9
             - buy_delay: buy and sell dates
@@ -393,12 +394,11 @@ will be first entry of "Buy Dates".', do_print=do_print)
             - grad: "gradient" of the model (optionally)
         '''
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
-
         utils._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers), \
                           do_print=do_print)
-        macd = self._calc_ema(self.data, periods[0]) - \
-               self._calc_ema(self.data, periods[1])
-        signal_line = self._calc_ema(macd, periods[2])
+        macd = self._calc_ema(self.data, self.periods[0]) - \
+               self._calc_ema(self.data, self.periods[1])
+        signal_line = self._calc_ema(macd, self.periods[2])
         if len(self.tickers) == 1:
             grad = np.gradient(macd[self.tickers[0]] - \
                                signal_line[self.tickers[0]])
@@ -407,7 +407,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
         local_min, local_max, grad_dict = {}, {}, {}
         if isinstance(grad, list):
             utils._print_issue('WARNING', 'Ignoring second entry of gradient!', \
-                              do_print=do_print)
+                               do_print=do_print)
             grad = grad[0].T
             for n in range(grad.shape[0]):
                 local_min[self.tickers[n]] = argrelextrema(grad[n], np.less)
