@@ -126,7 +126,6 @@ class MODEL():
             valid_tickers = utils.check_ticker_input(tickers_input=tickers, \
                                                      tickers_avail=self.tickers, \
                                                      do_print=True)
-
         utils.print_opening(ticker=valid_tickers, \
                             start_date=self.data.index[0].strftime('%D'), \
                             end_date=self.data.index[-1].strftime('%D'), \
@@ -134,7 +133,7 @@ class MODEL():
                             do_print=do_print)
 
         if any([self.local_min is None, self.local_max is None, self.grad is None]):
-            self._init_model()
+            self._init_model(do_print=do_print)
 
         for ticker in valid_tickers:
             utils._print_issue('TICKER', ticker, do_print=do_print)
@@ -220,7 +219,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                             'Trade Win': trade_wins, \
                                             'Trade Efficiency': win_loss})
             self.ticker_df[ticker] = final_df
-            utils._print_issue(None, '-'*82)
+            utils._print_issue(None, '-' * 82, do_print=do_print)
             utils._print_issue('SUMMARY', \
                                'Average trade win: {:.10%}'.format(average_win), \
                                do_print=do_print)
@@ -319,6 +318,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                                tickers_avail=self.tickers, \
                                                do_print=True)
         for ticker in tickers:
+            utils._print_issue(None, '=' * 82)
             utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
             #check if last value is nan:
             last_value_index = -1
@@ -357,11 +357,14 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 p_range = self._parse_kwargs('plot_range', kwargs, None)
                 p_index = self._parse_kwargs('plot_from_index', kwargs, None)
                 p_date = self._parse_kwargs('plot_from_date', kwargs, None)
-                plotting.plot_model(test_model, tickers=ticker, \
+                switch_axes = self._parse_kwargs('switch_axes', kwargs, False)
+                plotting.plot_model(model=test_model, \
+                                    tickers=ticker, \
                                     plot_range=p_range, \
                                     plot_from_index=p_index, \
                                     plot_from_date=p_date, \
-                                    plot_break_values=True)
+                                    plot_break_values=True, \
+                                    switch_axes=switch_axes)
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
