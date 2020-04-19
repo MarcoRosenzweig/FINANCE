@@ -347,6 +347,8 @@ will be first entry of "Buy Dates".', do_print=do_print)
             test_values = [value for value in [bottom_value, middle_value, \
                                                top_value] if value is not None]
             for value in test_values:
+                utils._print_issue(None, '-' * 82)
+                utils._print_issue('INFO', 'Result for value: {}'.format(value))
                 #create an imag_model:
                 test_model = self.copy_model()
                 #assign the value to the last entry:
