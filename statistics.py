@@ -23,17 +23,20 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
     for ticker in tickers:
         utils._print_issue(None, '=' * 82)
         utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
-        z_values, tols = _create_z_values(model=model, ticker=ticker, \
-                                          stats_data=stats_data, timezone=timezone, \
-                                          start=start, \
-                                          auto_update_tolerances=auto_update_tolerances)
+        z_values, tols, means = _create_z_values(model=model, ticker=ticker, \
+                                                 stats_data=stats_data, timezone=timezone, \
+                                                 start=start, \
+                                                 auto_update_tolerances=auto_update_tolerances)
 
         freq_range, frequencies = _create_freq()
         delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
         delta_t = pd.Timedelta(delta_t).seconds / 3600
 
         arg = np.argsort(tols)
-        probs = (1 - ss.norm.cdf(z_values)) * 100
+        probs = ss.norm.cdf(z_values) * 100
+        # do 1 - if:
+        flip_arg = np.where(z_values > 0)
+        probs[np.where(z_values > 0)] = (1 - ss.norm.cdf(z_values[flip_arg])) * 100
         poly_deg = 5
         poly_probs = np.zeros(2)
         fig, axs = plt.subplots(2, 1, figsize=(16, 9), sharex=True, sharey=True)
@@ -95,9 +98,10 @@ def _create_z_values(model, ticker, stats_data=None, \
     else:
         tol_unten = np.sort(model.tolerances[ticker])[0]
         tol_oben = np.sort(model.tolerances[ticker])[1]
+    tol_unten = -200
     z_values_unten = (tol_unten - means) / stds
     z_values_oben = (tol_oben - means) / stds
-    return np.array([z_values_unten, z_values_oben]), np.array([tol_unten, tol_oben])
+    return np.array([z_values_unten, z_values_oben]), np.array([tol_unten, tol_oben]), means
 
 def _get_price_moves_and_stats(ticker, stats_data=None, \
                                timezone=None, start=None):
