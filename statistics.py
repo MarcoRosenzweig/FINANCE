@@ -98,7 +98,6 @@ def _create_z_values(model, ticker, stats_data=None, \
     else:
         tol_unten = np.sort(model.tolerances[ticker])[0]
         tol_oben = np.sort(model.tolerances[ticker])[1]
-    tol_unten = -200
     z_values_unten = (tol_unten - means) / stds
     z_values_oben = (tol_oben - means) / stds
     return np.array([z_values_unten, z_values_oben]), np.array([tol_unten, tol_oben]), means
