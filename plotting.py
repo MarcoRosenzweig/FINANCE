@@ -5,7 +5,7 @@ import utils
 import numpy as np
 
 def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
-               plot_from_date=None, plot_break_values=True, \
+               plot_from_date=None, plot_break_values=True, switch_axes=False, \
                *args, **kwargs):
 
     '''
@@ -53,29 +53,6 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
             in_loop = True
             local_min = model.local_min[ticker][0][min_arg[1]]
             local_max = model.local_max[ticker][0][max_arg[1]]
-
-        plt.figure(figsize=(16, 9))
-        ax1 = plt.subplot(2, 1, 1)
-        plt.fill_between(x_axis, 0, grad, \
-                         where=grad > 0, \
-                         facecolor='green', interpolate=True, label='Up Trend')
-        plt.fill_between(x_axis, 0, grad, \
-                         where=grad <= 0, \
-                         facecolor='red', interpolate=True, label='Down Trend')
-        plt.vlines(model.data[ticker].index[local_min], \
-                   np.min(grad), np.max(grad), \
-                   color='g', label='Min Reached')
-        plt.vlines(model.data[ticker].index[local_max], \
-                   np.min(grad), np.max(grad), \
-                   color='r', label='Peak Reached')
-        try:
-            plt.title(ticker, kwargs['title'])
-        except KeyError:
-            plt.title(ticker, fontsize=14)
-        plt.legend(loc='upper left')
-        plt.grid()
-        #subplot 2:
-        ax2 = plt.subplot(2, 1, 2, sharex=ax1)
         price = model.data[ticker][indices]
         try:
             buy_dates = model.ticker_df[ticker]['Buy Dates'].values[min_arg[0]]
@@ -98,21 +75,47 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
                 sell_dates = model.ticker_df[ticker]['Sell Dates'].values[max_arg[1][:-1]]
             sell_dates = np.hstack((sell_dates, model.data[ticker].index[local_max[-1] + 1].to_numpy()))
 
-        plt.plot(x_axis, price, \
-                 label='{} price'.format(ticker))
-        plt.vlines(buy_dates, np.min(price), np.max(price), \
+        #Generating plots:
+        fig, axs = plt.subplots(2, 1, figsize=(16, 9), sharex=True)
+        if switch_axes:
+            ax_indices = [1, 0]
+        else:
+            ax_indices = [0, 1]
+        axs[ax_indices[0]].fill_between(x_axis, 0, grad, \
+                         where=grad > 0, \
+                         facecolor='green', interpolate=True, label='Up Trend')
+        axs[ax_indices[0]].fill_between(x_axis, 0, grad, \
+                         where=grad <= 0, \
+                         facecolor='red', interpolate=True, label='Down Trend')
+        axs[ax_indices[0]].vlines(model.data[ticker].index[local_min], \
+                   np.min(grad), np.max(grad), \
+                   color='g', label='Min Reached')
+        axs[ax_indices[0]].vlines(model.data[ticker].index[local_max], \
+                   np.min(grad), np.max(grad), \
+                   color='r', label='Peak Reached')
+        #layout:
+        axs[ax_indices[0]].set_title('{} - MODEL'.format(ticker), fontsize='larger')
+        axs[ax_indices[0]].set_ylabel('Gradient [-]', fontsize='larger')
+        #subplot 2:
+        axs[ax_indices[1]].plot(x_axis, price, \
+                 label='{}'.format(ticker))
+        axs[ax_indices[1]].vlines(buy_dates, np.min(price), np.max(price), \
                    color='g', label='Buy Dates')
-        plt.vlines(sell_dates, \
+        axs[ax_indices[1]].vlines(sell_dates, \
                    np.min(price), np.max(price), \
                    color='r', linestyle='--', label='Sell dates')
         if plot_break_values:
             if model.break_values is not None:
-                plt.hlines(model.break_values[ticker][0], x_axis[0], x_axis[-1], \
+                axs[ax_indices[1]].hlines(model.break_values[ticker][0], x_axis[0], x_axis[-1], \
                            color='k', label='Break value w.r.t today')
-                plt.hlines(model.break_values[ticker][1], x_axis[0], x_axis[-1], \
+                axs[ax_indices[1]].hlines(model.break_values[ticker][1], x_axis[0], x_axis[-1], \
                            color='c', label='Break value w.r.t yesterday')
-
-        plt.legend(loc='upper left')
-        plt.grid()
-        #return ax1, ax2
-        #plt.show()
+        #layout:
+        axs[ax_indices[1]].set_title('{} - PRICE'.format(ticker), fontsize='larger')
+        axs[ax_indices[1]].set_ylabel('Price', fontsize='larger')
+        #settings for all plots:
+        axs[np.sort(ax_indices)[-1]].set_xlabel('Date', fontsize='larger')
+        for n in ax_indices:
+            axs[ax_indices[n]].grid()
+            axs[ax_indices[n]].legend(loc='upper left')
+        plt.show()

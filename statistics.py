@@ -2,11 +2,11 @@ import utils
 import scipy.stats as ss
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 def calc_probs(model, time=None, tickers='all', stats_data=None, \
                auto_update_tolerances=False, *args, **kwargs):
 
+    import matplotlib.pyplot as plt
     if tickers == 'all':
         tickers = model.tickers
     else:
@@ -21,40 +21,51 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
     except KeyError:
         start = None
     for ticker in tickers:
-        utils._print_issue(None, '=' * 80)
+        utils._print_issue(None, '=' * 82)
         utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
-        z_values = _create_z_values(model=model, ticker=ticker, \
-                                    stats_data=stats_data, timezone=timezone, \
-                                    start=start, \
-                                    auto_update_tolerances=auto_update_tolerances)
+        z_values, tols = _create_z_values(model=model, ticker=ticker, \
+                                          stats_data=stats_data, timezone=timezone, \
+                                          start=start, \
+                                          auto_update_tolerances=auto_update_tolerances)
 
         freq_range, frequencies = _create_freq()
         delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
         delta_t = pd.Timedelta(delta_t).seconds / 3600
-        #plots:
-        fig = plt.figure(figsize=(16, 9))
-        ax1 = plt.subplot(211)
+
+        arg = np.argsort(tols)
         probs = (1 - ss.norm.cdf(z_values)) * 100
-        ax1.plot(frequencies, probs[0], label='Probability for smallest tolerance.')
-        plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
-        deg = 5
-        poly_line = np.poly1d(np.polyfit(freq_range, probs[0], deg))
-        ax1.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
-        ax1.invert_xaxis()
-        ax1.grid()
-        ax1.legend()
-        prob_small = poly_line(delta_t)
-        print('Probability for reaching smallest tolerance: {}%'.format(prob_small))
-        ax2 = plt.subplot(212, sharex=ax1)
-        ax2.plot(frequencies, probs[1], label='Probability for highest tolerance.')
-        plt.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline.')
-        poly_line = np.poly1d(np.polyfit(freq_range, probs[1], deg))
-        ax2.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(deg))
-        ax2.grid()
-        ax2.legend()
-        prob_high = poly_line(delta_t)
-        print('Probability for reaching highest tolerance: {}%'.format(prob_high))
-        print('Probability between: {}%'.format(np.abs(prob_high - prob_small)))
+        poly_deg = 5
+        poly_probs = np.zeros(2)
+        fig, axs = plt.subplots(2, 1, figsize=(16, 9), sharex=True, sharey=True)
+        for n, ax in enumerate(axs):
+            ax.plot(frequencies, probs[n], \
+                    label='Probability')
+            ax.vlines(delta_t, np.min(probs), np.max(probs), label='Time to deadline')
+            poly_line = np.poly1d(np.polyfit(freq_range, probs[n], poly_deg))
+            ax.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(poly_deg))
+            title = 'Ticker: {} - Break Value: {} - Tolerance: {}'.format(ticker, \
+            model.break_values[ticker][arg[n]], tols[arg[n]])
+            current_prob = poly_line(delta_t)
+            ax.text(x=delta_t - .25, y=(np.max(probs) + np.min(probs))*.5, \
+                    s='{:.2f}%'.format(current_prob), fontsize='larger')
+            ax.set_title(title, fontsize='large')
+            ax.legend()
+            ax.grid()
+            ax.yaxis.get_label().set_fontsize('larger')
+            ax.xaxis.get_label().set_fontsize('larger')
+            poly_probs[n] = current_prob
+
+        ax.invert_xaxis()
+        plt.setp(axs[-1], xlabel='Time to break value [h]')
+        plt.setp(axs, ylabel='Probability [%]')
+        prob_between = np.abs(np.diff(poly_probs))[0]
+        for n, prob in enumerate(poly_probs):
+            utils._print_issue('STATS-EVAL', \
+                               'Probability for tol={:.5f}: {:.2f}%'.format(tols[arg][n], prob))
+
+        utils._print_issue('STATS-EVAL', \
+                           'Probability between: {:.2f}%'.format(prob_between))
+        plt.show()
 
 def _create_z_values(model, ticker, stats_data=None, \
                      auto_update_tolerances=False, *args, **kwargs):
@@ -72,13 +83,13 @@ def _create_z_values(model, ticker, stats_data=None, \
                                                 timezone=timezone, \
                                                 start=start)
     if auto_update_tolerances:
-        utils._print_issue('INFO', 'Auto update of tolerances!')
+        utils._print_issue('STATS-INFO', 'Auto update of tolerances!')
         current_value = utils.download_data(tickers=ticker, \
                                             start=pd.Timestamp.today(), \
                                             value='Close').values[-1]
         current_tols = model.break_values[ticker] - current_value
-        utils._print_issue('INFO', 'Current value: {}!'.format(current_value))
-        utils._print_issue('INFO', 'New tolerances: {}!'.format(current_tols))
+        utils._print_issue('STATS-INFO', 'Current value: {}!'.format(current_value))
+        utils._print_issue('STATS-INFO', 'New tolerances: {}!'.format(current_tols))
         tol_unten = np.sort(current_tols)[0]
         tol_oben = np.sort(current_tols)[1]
     else:
@@ -86,7 +97,7 @@ def _create_z_values(model, ticker, stats_data=None, \
         tol_oben = np.sort(model.tolerances[ticker])[1]
     z_values_unten = (tol_unten - means) / stds
     z_values_oben = (tol_oben - means) / stds
-    return np.array([z_values_unten, z_values_oben])
+    return np.array([z_values_unten, z_values_oben]), np.array([tol_unten, tol_oben])
 
 def _get_price_moves_and_stats(ticker, stats_data=None, \
                                timezone=None, start=None):
