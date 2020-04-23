@@ -105,8 +105,6 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
                    np.min(price), np.max(price), \
                    color='r', linestyle='--', label='Sell dates')
 
-        
-
         if plot_break_values:
             if model.break_values is not None:
                 axs[ax_indices[1]].hlines(model.break_values[ticker][0], x_axis[0], x_axis[-1], \

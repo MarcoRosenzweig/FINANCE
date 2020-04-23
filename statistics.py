@@ -33,6 +33,7 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
         delta_t = pd.Timedelta(delta_t).seconds / 3600
 
         arg = np.argsort(tols)
+        value_arg = np.argsort(model.break_values[ticker])
         probs = ss.norm.cdf(z_values) * 100
         # do 1 - if:
         flip_arg = np.where(z_values > 0)
@@ -47,7 +48,7 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
             poly_line = np.poly1d(np.polyfit(freq_range, probs[n], poly_deg))
             ax.plot(frequencies, poly_line(freq_range), 'r', label='Polyfit of deg {}'.format(poly_deg))
             title = 'Ticker: {} - Break Value: {} - Tolerance: {}'.format(ticker, \
-            model.break_values[ticker][arg[n]], tols[arg[n]])
+            model.break_values[ticker][value_arg[n]], tols[arg[n]])
             current_prob = poly_line(delta_t)
             ax.text(x=delta_t - .25, y=(np.max(probs) + np.min(probs))*.5, \
                     s='{:.2f}%'.format(current_prob), fontsize='larger')
