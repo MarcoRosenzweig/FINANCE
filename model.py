@@ -247,14 +247,15 @@ will be first entry of "Buy Dates".', do_print=do_print)
             return new_data
 
     def comp_break_values(self, tickers='all', refactor_step_size=1, \
-                          append_break_values=False, *args, **kwargs):
+                          append_break_values=False, parallel_computing=True,\
+                          *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
         else:
             tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                                     tickers_avail=self.tickers, \
-                                                     do_print=True)
+                                               tickers_avail=self.tickers, \
+                                               do_print=True)
         imag_model = self.copy_model()
         break_values_dict = dict.fromkeys(tickers)
         current_values = dict.fromkeys(tickers, None)
@@ -277,20 +278,33 @@ will be first entry of "Buy Dates".', do_print=do_print)
             end_value = current_values[ticker] * (1 + deviation)
             step_size = (current_values[ticker] / 5000) * refactor_step_size
             rng = np.arange(start_value, end_value, step_size)
-            #start algorithm:
-            #split the tasks here for multiprocessing
-            for value in rng:
-                imag_model.data[ticker].values[-1] = value
-                imag_model._init_model(do_print=False)
-                current_grad = imag_model.grad[ticker]
-                if np.sign(np.diff(current_grad)[-1]) > 0 and break_values[0] is None:
-                    break_values[0] = value
-                elif np.sign(np.diff(current_grad)[-2]) > 0 and break_values[1] is None:
-                    break_values[1] = value
-                if all(break_values):
-                    break_values_dict[ticker] = break_values
-                    break
-            tolerances[ticker] = break_values - current_values[ticker]
+            try:
+                import multiprocessing as mp
+            except ModuleNotFoundError:
+                utils._print_issue('ERROR', 'Multiprocessing module not available.')
+                parallel_computing = False
+            if not parallel_computing:
+                break_values_dict[ticker] = np.sort(self._comp_bvs(model=imag_model, \
+                                                                   rng=rng, \
+                                                                   ticker=ticker))
+            else:
+                n_procs = 10
+                utils._print_issue('INFO', 'Using {} processes.'.format(n_procs))
+                rng_list = self._do_array_split(rng, n_procs)
+                from functools import partial
+                inputs_partial = partial(self._comp_bvs, imag_model, ticker)
+                with mp.Pool(processes=n_procs) as pool:
+                    bvs = pool.map(inputs_partial, rng_list)
+                bv_final = [None, None]
+                for bv_list in bvs:
+                    for n, bv in enumerate(bv_list):
+                        if bv is not None and bv_final[n] is None:
+                            bv_final[n] = bv
+                        if all(bv_final):
+                            break
+                break_values_dict[ticker] = np.sort(bv_final)
+            #make sure to already have sort break_values_dict!
+            tolerances[ticker] = break_values_dict[ticker] - current_values[ticker]
 
         self.tolerances = tolerances
         self.break_values = break_values_dict
@@ -331,19 +345,12 @@ will be first entry of "Buy Dates".', do_print=do_print)
             if self.break_values[ticker] is None and generic_value is None:
                 utils._print_issue('ERROR', 'No break values computed for this ticker!')
                 continue
-
-            arg = np.argsort(self.tolerances[ticker])
             deviation = self._parse_kwargs('deviation', kwargs, error_arg=.0125)
-            bottom_value = self.break_values[ticker][arg[0]]
-            top_value = self.break_values[ticker][arg[1]]
-            middle_value = None
-            #if  self.data[ticker][last_value_index] < top_value:
-            #    if self.data[ticker][last_value_index] > bottom_value:
+            bottom_value, top_value = self.break_values[ticker]
             middle_value = (top_value - bottom_value)*.5 + bottom_value
             bottom_value *= (1 - deviation)
             top_value *= (1 + deviation)
-            test_values = [value for value in [bottom_value, middle_value, \
-                                               top_value] if value is not None]
+            test_values = [bottom_value, middle_value, top_value]
             for value in test_values:
                 utils._print_issue(None, '-' * 82)
                 utils._print_issue('INFO', 'Result for value: {}'.format(value))
@@ -459,6 +466,28 @@ will be first entry of "Buy Dates".', do_print=do_print)
     Sell locations are set to buy locations.', do_print=do_print)
                 sell_locs = buy_locs
         return buy_locs, sell_locs
+
+    def _comp_bvs(self, model, ticker, rng):
+        #make sure to be in consistent order of inputs w.r.t partial/pool.map function
+        break_values = [None, None]
+        for value in rng:
+            model.data[ticker].values[-1] = value
+            model._init_model(do_print=False)
+            current_grad = model.grad[ticker]
+            if np.sign(np.diff(current_grad)[-1]) > 0 and break_values[0] is None:
+                break_values[0] = value
+            elif np.sign(np.diff(current_grad)[-2]) > 0 and break_values[1] is None:
+                break_values[1] = value
+            if all(break_values):
+                break
+        return break_values
+
+    def _do_array_split(self, rng, n_procs, safety_value_range=5):
+        rngs = np.array_split(rng, n_procs)
+        for n, rng in enumerate(rngs):
+            if n != len(rngs) - 1:
+                rngs[n] = np.append(rng, rngs[n + 1][:safety_value_range])
+        return rngs
 ###############################################################################
 #   USEFUL FUNCTIONS
 ###############################################################################
