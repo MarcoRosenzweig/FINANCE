@@ -232,21 +232,22 @@ will be first entry of "Buy Dates".', do_print=do_print)
     def copy_model(self):
         return copy.deepcopy(self)
 
-    def append_timedelta(self, timedelta=1, *args, **kwargs):
+    def append_timedelta(self, timedelta=1, overwrite_data=True, *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         new_entry = self.data.index[-1] + pd.Timedelta(days=timedelta)
         final_entries = list(self.data.index)
         final_entries.append(new_entry)
         idx = pd.DatetimeIndex(final_entries)
         new_data = self.data.reindex(idx)
-
-        input_message = 'Overwrite existing data? '
-        if self._get_answer(input_message=input_message):
+        if overwrite_data:
+            utils._print_issue('INFO', 'New data was appended.', \
+                               do_print=do_print)
             self.data = new_data
         else:
             return new_data
 
-    def comp_break_values(self, tickers='all', refactor_step_size=1, *args, **kwargs):
+    def comp_break_values(self, tickers='all', refactor_step_size=1, \
+                          append_break_values=False, *args, **kwargs):
         do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
@@ -260,10 +261,11 @@ will be first entry of "Buy Dates".', do_print=do_print)
         tolerances = dict.fromkeys(tickers)
         deviation = .3
         utils._print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation), \
-                          do_print=do_print)
+                           do_print=do_print)
 
         for ticker in tickers:
-            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
+            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker), \
+                               do_print=do_print)
             break_values = [None, None]
             if np.isnan(self.data[ticker].values[-1]):
                 value_index = -2
@@ -276,6 +278,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
             step_size = (current_values[ticker] / 5000) * refactor_step_size
             rng = np.arange(start_value, end_value, step_size)
             #start algorithm:
+            #split the tasks here for multiprocessing
             for value in rng:
                 imag_model.data[ticker].values[-1] = value
                 imag_model._init_model(do_print=False)
@@ -291,8 +294,9 @@ will be first entry of "Buy Dates".', do_print=do_print)
 
         self.tolerances = tolerances
         self.break_values = break_values_dict
-        input_message = 'Append breaking values w.r.t smallest tolerances? '
-        if self._get_answer(input_message=input_message):
+        if append_break_values:
+            utils._print_issue('INFO', 'Appending break values to model data', \
+                               do_print=do_print)
             for ticker in valid_tickers:
                 smal_tol = np.argsort(tolerances[ticker])[0]
                 self.data[ticker][-1] = break_values_dict[ticker][smal_tol]
