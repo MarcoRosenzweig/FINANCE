@@ -189,8 +189,8 @@ class MODEL():
                                    do_print=do_print)
                 net_income = np.sum(trade_wins)
             #create final DataFrame
-            sell_grad = self.grad[ticker][sell_locs]
-            buy_grad = self.grad[ticker][buy_locs]
+            sell_grad = self.grad[ticker][sell_locs - self.buy_delay]
+            buy_grad = self.grad[ticker][buy_locs - self.buy_delay]
             #be aware that buy_dates can be 1 entry longer then sell dates!
             if buy_dates.shape[0] > sell_dates.shape[0]:
                 if sell_dates.shape[0] > 0:
