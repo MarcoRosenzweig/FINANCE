@@ -112,7 +112,6 @@ def _get_price_moves_and_stats(ticker, stats_data=None, \
     if stats_data is None:
         stats_data = utils.download_data(tickers=ticker, start=start, \
                                          interval='60m', value='Close')
-
     freq_range, frequencies = _create_freq()
     price_movements = dict.fromkeys(frequencies)
     means = np.zeros(freq_range.shape)

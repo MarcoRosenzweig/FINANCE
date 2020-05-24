@@ -189,6 +189,8 @@ class MODEL():
                                    do_print=do_print)
                 net_income = np.sum(trade_wins)
             #create final DataFrame
+            sell_grad = self.grad[ticker][self.local_max[ticker]]
+            buy_grad = self.grad[ticker][self.local_min[ticker]]
             #be aware that buy_dates can be 1 entry longer then sell dates!
             if buy_dates.shape[0] > sell_dates.shape[0]:
                 if sell_dates.shape[0] > 0:
@@ -206,13 +208,16 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 trade_rewards = np.append(trade_rewards, np.nan)
                 trade_wins = np.append(trade_wins, np.nan)
                 win_loss = np.append(win_loss, np.nan)
+                sell_grad = np.append(sell_grad, np.nan)
             final_df = pd.DataFrame(data = {'Buy Dates': buy_dates, \
                                             'Sell Dates': sell_dates, \
                                             'Buy Prices': buy_prices.to_numpy(), \
                                             'Sell Prices': sell_prices.to_numpy(), \
                                             'Trade Reward': trade_rewards, \
                                             'Trade Win': trade_wins, \
-                                            'Trade Efficiency': win_loss})
+                                            'Trade Efficiency': win_loss, \
+                                            'Grad at Buy': buy_grad, \
+                                            'Grad at Sell': sell_grad})
             self.ticker_df[ticker] = final_df
             utils._print_issue(None, '-' * 82, do_print=do_print)
             utils._print_issue('SUMMARY', \
