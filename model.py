@@ -209,6 +209,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 trade_wins = np.append(trade_wins, np.nan)
                 win_loss = np.append(win_loss, np.nan)
                 sell_grad = np.append(sell_grad, np.nan)
+            grad_diff = sell_grad - buy_grad
             final_df = pd.DataFrame(data = {'Buy Dates': buy_dates, \
                                             'Sell Dates': sell_dates, \
                                             'Buy Prices': buy_prices.to_numpy(), \
@@ -217,7 +218,8 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                             'Trade Win': trade_wins, \
                                             'Trade Efficiency': win_loss, \
                                             'Grad at Buy': buy_grad, \
-                                            'Grad at Sell': sell_grad})
+                                            'Grad at Sell': sell_grad, \
+                                            'Grad Difference': grad_diff})
             self.ticker_df[ticker] = final_df
             utils._print_issue(None, '-' * 82, do_print=do_print)
             utils._print_issue('SUMMARY', \
