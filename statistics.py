@@ -21,7 +21,7 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
     except KeyError:
         start = None
     for ticker in tickers:
-        utils._print_issue(None, '=' * 82)
+        utils._print_issue(None, '=' * 80)
         utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
         z_values, tols, means = _create_z_values(model=model, ticker=ticker, \
                                                  stats_data=stats_data, timezone=timezone, \

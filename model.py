@@ -76,7 +76,7 @@ class MODEL():
                 utils._print_issue('INFO', 'No NaN values detected.', \
                                     do_print=do_print)
 
-    def apply_date_filter(self, filter_date_range):
+    def apply_date_filter(self, filter_date_range, force_apply=True):
         try:
             filtered_data = self.data.reindex(filter_date_range)
         except KeyError:
@@ -87,10 +87,15 @@ class MODEL():
             nan_values = np.where(np.isnan(filtered_data))[0]
             n_nan_values = nan_values.size
             if  n_nan_values > 0:
-                utils._print_issue('WARNING', 'Filter would result in {} NaN values.'\
-.format(n_nan_values))
-                input_message = 'Remove NaN values?: '
-                force_filter = self._get_answer(input_message=input_message)
+                if force_apply == True:
+                    utils._print_issue('WARNING', '"force_apply" is active. Removing {} NaN values.'\
+    .format(n_nan_values))
+                    force_filter = True
+                else:
+                    utils._print_issue('WARNING', 'Filter would result in {} NaN values.'\
+    .format(n_nan_values))
+                    input_message = 'Remove NaN values?: '
+                    force_filter = self._get_answer(input_message=input_message)
                 if force_filter:
                     filtered_data = filtered_data.dropna()
             self.data = filtered_data
@@ -221,7 +226,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                             'Grad at Sell': sell_grad, \
                                             'Grad Difference': grad_diff})
             self.ticker_df[ticker] = final_df
-            utils._print_issue(None, '-' * 82, do_print=do_print)
+            utils._print_issue(None, '-' * 80, do_print=do_print)
             utils._print_issue('SUMMARY', \
                                'Average trade win: {:.10%}'.format(average_win), \
                                do_print=do_print)
@@ -234,7 +239,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
             utils._print_issue('SUMMARY', \
                                'NET WIN: {:.2f}'.format(net_income), \
                                do_print=do_print)
-            utils._print_issue(None, '=' * 82, do_print=do_print)
+            utils._print_issue(None, '=' * 80, do_print=do_print)
 
     def copy_model(self):
         return copy.deepcopy(self)
@@ -338,7 +343,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                                tickers_avail=self.tickers, \
                                                do_print=True)
         for ticker in tickers:
-            utils._print_issue(None, '=' * 82)
+            utils._print_issue(None, '=' * 80)
             utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
             #check if last value is nan:
             last_value_index = -1
@@ -359,7 +364,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
             top_value *= (1 + deviation)
             test_values = [bottom_value, middle_value, top_value]
             for value in test_values:
-                utils._print_issue(None, '-' * 82)
+                utils._print_issue(None, '-' * 80)
                 utils._print_issue('INFO', 'Result for value: {}'.format(value))
                 #create an imag_model:
                 test_model = self.copy_model()
@@ -445,7 +450,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
         self.grad = grad_dict
         utils._print_issue('INIT', 'Successfully initialized model.', \
                           do_print=do_print)
-        utils._print_issue(None, '*' * 82, \
+        utils._print_issue(None, '*' * 80, \
                           do_print=do_print)
 
     def _get_locs(self, ticker, *args, **kwargs):

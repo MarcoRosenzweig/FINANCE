@@ -42,7 +42,7 @@ def print_opening(do_print=True, *args, **kwargs):
     Inputs:
         - args and kwargs: both will be printed, but "_" in args will be replaced by " ".
     '''
-    n_break_chars = 82
+    n_break_chars = 80
     lines = []
     lines.append('=' * n_break_chars)
     header = ['PRICE MODEL']
@@ -78,7 +78,7 @@ def _format_string(string, center_alligned=True):
     '''
     special_char = '|'
     if center_alligned:
-        string = string.center(80)
+        string = string.center(78)
     return '{}{}{}'.format(special_char, string, special_char)
 
 def check_ticker_input(tickers_input, tickers_avail, do_print=True):
