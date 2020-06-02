@@ -1,3 +1,3 @@
 # FINANCE
-Easy tools for trading stocks and cryptos.
+Easy tools for trading cryptos.
 Object Oriented Programming.
