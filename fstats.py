@@ -89,7 +89,7 @@ def _create_z_values(model, ticker, stats_data=None, \
     if auto_update_tolerances:
         utils._print_issue('STATS-INFO', 'Auto update of tolerances!')
         current_value = utils.download_data(tickers=ticker, \
-                                            start=pd.Timestamp.today(), \
+                                            start=(pd.Timestamp.today() - pd.Timedelta('1 days')), \
                                             value='Close').values[-1]
         current_tols = model.break_values[ticker] - current_value
         utils._print_issue('STATS-INFO', 'Current value: {}!'.format(current_value))
