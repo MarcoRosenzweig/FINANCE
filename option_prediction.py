@@ -22,7 +22,7 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
         - option_dates as date list in format %Y-%M-D
     Returns:
         - DataFrame
-        
+
     """
     #Loop to calculate Weighted Average Strike Price (predicted Price) between Put & Call Options
     ticker_t_p_list = []
@@ -70,7 +70,7 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
             Top_Limit_OI = max(Top_CP_OI)
 
             limit = (Top_Limit_OI / 20)
-            bigP_OI = puts_strikes_OI_dropna_droph[puts_strikes_OI_dropna_droph['openInterest'] > limit] 
+            bigP_OI = puts_strikes_OI_dropna_droph[puts_strikes_OI_dropna_droph['openInterest'] > limit]
             bigC_OI = calls_strikes_OI_dropna_droph[calls_strikes_OI_dropna_droph['openInterest'] > limit]
 
             mylist = []
@@ -79,7 +79,7 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
                 df = (c_n,) * np.shape(option_dates)[0]
                 mylist.append(df)
 
-            C_N_df = list(itertools.chain(*mylist)) 
+            C_N_df = list(itertools.chain(*mylist))
 
             option_dates_df = option_dates * np.shape(Company_Names)[0]
 
@@ -134,14 +134,18 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
         x_dates.append(x_date)
 
     Today = [None] * (np.shape(Company_Names)[0]*np.shape(option_dates)[0])
-
     Today = [datetime.datetime.today() if x==None else x for x in Today]
-
-    Days_to_Exp = [a - b for a, b in zip(x_dates, Today)]
+    Days_to_Exp = [(a - b).days for a, b in zip(x_dates, Today)]
     #Weekly Price Changes from TODAY DF
-    Option_Analysis_T0 = pd.DataFrame({'Tickers': C_N_df, "Todays Price": Prices_df,'Option Exp Date': option_dates_df,                                     "Days_to_Exp": Days_to_Exp,"Calls_WOI": Calls_WOI_list,                                     "Puts_WOI": Puts_WOI_list, "Predicted_Opt_Price":CP_WMid_list})
-    Option_Analysis_T0["implied Change from T0"] = Option_Analysis_T0["Predicted_Opt_Price"] - Option_Analysis_T0["Todays Price"] 
-    Option_Analysis_T0["implied %Change from T0"] = (Option_Analysis_T0["implied Change from T0"] /                                                   Option_Analysis_T0["Todays Price"])*100
+    Option_Analysis_T0 = pd.DataFrame({'Tickers': C_N_df,
+                                       "Todays Price": Prices_df,
+                                       'Option Exp Date': option_dates_df,
+                                       "Days_to_Exp": Days_to_Exp,
+                                       "Calls_WOI": Calls_WOI_list,
+                                       "Puts_WOI": Puts_WOI_list,
+                                       "Predicted_Opt_Price":CP_WMid_list})
+    Option_Analysis_T0["implied Change from T0"] = Option_Analysis_T0["Predicted_Opt_Price"] - Option_Analysis_T0["Todays Price"]
+    Option_Analysis_T0["implied %Change from T0"] = (Option_Analysis_T0["implied Change from T0"] / Option_Analysis_T0["Todays Price"])*100
     #Inter-Weekly Changes DF - X-train/test for TF
     Pct_Change_T1_df=[]
     Price_diff_T1_l_df = []
@@ -165,7 +169,15 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
         for z in Price_diff_T1_l:
             Price_diff_T1_l_df.append(z)
 
-    Option_Analysis_Weekly = pd.DataFrame({'Tickers': C_N_df, "Todays Price": Prices_df,                                           'Option Exp Date': option_dates_df,                                            "Days_to_Exp": Days_to_Exp,"Calls_WOI": Calls_WOI_list,                                            "Puts_WOI": Puts_WOI_list, "Predicted_Opt_Price":CP_WMid_list,                                           "implied Change to prior week":Price_diff_T1_l_df,                                           "implied %Change to prior week": Pct_Change_T1_df})
+    Option_Analysis_Weekly = pd.DataFrame({'Tickers': C_N_df,
+                                           "Todays Price": Prices_df,
+                                           'Option Exp Date': option_dates_df,
+                                           "Days_to_Exp": Days_to_Exp,
+                                           "Calls_WOI": Calls_WOI_list,
+                                           "Puts_WOI": Puts_WOI_list,
+                                           "Predicted_Opt_Price": CP_WMid_list,
+                                           "implied Change to prior week": Price_diff_T1_l_df,
+                                           "implied %Change to prior week": Pct_Change_T1_df})
 
     todaydate = datetime.date.today()
     today_str = str(todaydate).replace("-", "_")
@@ -174,11 +186,9 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
         os.mkdir(folder)
     except FileExistsError:
         pass
-    
+
     table_name = os.path.join(folder, "Option_Weekly_{}.csv".format(today_str))
     if export_table:
         Option_Analysis_Weekly.to_csv(table_name)
         print("Exported: {}".format(table_name))
     return Option_Analysis_Weekly
-
-
