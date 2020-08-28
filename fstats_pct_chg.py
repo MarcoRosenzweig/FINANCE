@@ -130,7 +130,6 @@ def _get_price_moves_and_stats(ticker, stats_data=None, \
         df['hours'] = pd.Series(hours)
         df['pct_change'] = pd.Series(np.flip(means))
         first_key = list(price_movements.values())[1]
-        print(first_key)
     return price_movements, means, stds
 
 def _create_freq():
