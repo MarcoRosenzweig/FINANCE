@@ -15,6 +15,13 @@ try:
 except FileExistsError:
     pass
 
+def create_option_dates(n_option_dates):
+    today = datetime.date.today()
+    fridays = today + datetime.timedelta((4 - today.weekday()) % 7)
+    return pd.date_range(periods=n_option_dates,
+                         start=fridays,
+                         freq='7d').strftime("%Y-%m-%d").to_list()
+
 def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER, export_table=True):
     """
     Inputs:
