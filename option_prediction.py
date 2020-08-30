@@ -32,25 +32,32 @@ def option_prediction (Company_Names, option_dates, output_folder=OUTPUT_FOLDER,
 
     """
     #Loop to calculate Weighted Average Strike Price (predicted Price) between Put & Call Options
-    ticker_t_p_list = []
-    price_change_list = []
     Calls_WOI_list = []
     Puts_WOI_list = []
     CP_WMid_list = []
+
+    #download data:
+    start = datetime.date.today()-datetime.timedelta(days=2)
+    tickerp = yf.download(Company_Names, start=start)['Close']
+    price_change = tickerp.pct_change() * 100
+    price_change_list = price_change.values[-1].round(4)
+    ticker_t_p_list = tickerp.values[-1]
 
     for x in Company_Names:
         #To get Options Data of Ticker list
         ticker = yf.Ticker(x)
 
         #To get Price Data of Ticker list
+        '''
         tickerp = yf.download(x, start= datetime.date.today() - datetime.timedelta(days=2))
         ticker_p = tickerp['Close']
         ticker_t_p = ticker_p[-1]
         ticker_t_p_list.append(ticker_t_p)
         ticker_ytd_p = ticker_p[-2]
-        price_change = (ticker_t_p -ticker_ytd_p)/ ticker_ytd_p *100
+        price_change = (ticker_t_p -ticker_ytd_p)/ ticker_ytd_p * 100
         price_change = round(price_change,4)
         price_change_list.append(price_change)
+        '''
 
         for y in option_dates:
             #To adjust the Options Dataframe for calls and puts
