@@ -76,11 +76,11 @@ class MODEL():
                 utils._print_issue('INFO', 'No NaN values detected.', \
                                     do_print=do_print)
 
-    def apply_date_filter(self, filter_date_range, force_apply=True):
+    def apply_date_filter(self, filter_date_range, force_apply=True, do_print=True):
         try:
             filtered_data = self.data.reindex(filter_date_range)
         except KeyError:
-            utils._print_issue('WARNING', 'filter not in data.')
+            utils._print_issue('WARNING', 'filter not in data.', do_print=do_print)
             return
         else:
             #1 index is ticker, 0 index is data
@@ -89,17 +89,17 @@ class MODEL():
             if  n_nan_values > 0:
                 if force_apply == True:
                     utils._print_issue('WARNING', '"force_apply" is active. Removing {} NaN values.'\
-    .format(n_nan_values))
+    .format(n_nan_values), do_print=do_print)
                     force_filter = True
                 else:
                     utils._print_issue('WARNING', 'Filter would result in {} NaN values.'\
-    .format(n_nan_values))
+    .format(n_nan_values), do_print=do_print)
                     input_message = 'Remove NaN values?: '
                     force_filter = self._get_answer(input_message=input_message)
                 if force_filter:
                     filtered_data = filtered_data.dropna()
             self.data = filtered_data
-            utils._print_issue('INFO', 'filter applied.')
+            utils._print_issue('INFO', 'filter applied.', do_print=do_print)
 
     def eval_model(self, tickers='all', entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
         '''
