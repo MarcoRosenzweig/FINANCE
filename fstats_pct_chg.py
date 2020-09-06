@@ -120,7 +120,7 @@ def _get_price_moves_and_stats(ticker, stats_data=None, \
         current_time = start
         current_rng = pd.date_range(start=current_time, end=pd.Timestamp.today(), \
                                     freq=freq, tz=timezone, name='Datetime')
-        current_moves = stats_data[current_rng].percent_chg()
+        current_moves = stats_data[current_rng].pct_change()
         current_moves = current_moves[~np.isnan(current_moves)]
         means[index] = np.mean(current_moves)
         stds[index] = np.std(current_moves)
@@ -130,7 +130,6 @@ def _get_price_moves_and_stats(ticker, stats_data=None, \
         df['hours'] = pd.Series(hours)
         df['pct_change'] = pd.Series(np.flip(means))
         first_key = list(price_movements.values())[1]
-        print(first_key)
     return price_movements, means, stds
 
 def _create_freq():

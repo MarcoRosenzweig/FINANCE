@@ -2,11 +2,10 @@ import utils
 import scipy.stats as ss
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def calc_probs(model, time=None, tickers='all', stats_data=None, \
                auto_update_tolerances=False, *args, **kwargs):
-
-    import matplotlib.pyplot as plt
     if tickers == 'all':
         tickers = model.tickers
     else:
