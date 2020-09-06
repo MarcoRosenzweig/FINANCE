@@ -293,7 +293,8 @@ will be first entry of "Buy Dates".', do_print=do_print)
             try:
                 import multiprocessing as mp
             except ModuleNotFoundError:
-                utils._print_issue('ERROR', 'Multiprocessing module not available.')
+                utils._print_issue('ERROR', 'Multiprocessing module not available.', \
+                                   do_print=do_print)
                 parallel_computing = False
             if not parallel_computing:
                 break_values_dict[ticker] = np.sort(self._comp_bvs(model=imag_model, \
@@ -301,7 +302,8 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                                                    ticker=ticker))
             else:
                 n_procs = 10
-                utils._print_issue('INFO', 'Using {} processes.'.format(n_procs))
+                utils._print_issue('INFO', 'Using {} processes.'.format(n_procs),
+                                   do_print=do_print)
                 rng_list = self._do_array_split(rng, n_procs)
                 from functools import partial
                 inputs_partial = partial(self._comp_bvs, imag_model, ticker)
