@@ -91,7 +91,7 @@ if __name__ == "__main__":
     main(vars(args))
     ELLAPSED_TIME = time.time() - START_TIME
     SUCCES_MESSAGE = "=" * 78
-    SUCCES_MESSAGE += "\nMACD_ANALYSIS SUCCESSFULLY TERMINATED AFTER {:.2f}sec.".format(ELLAPSED_TIME)
+    SUCCES_MESSAGE += "\n\nMACD_ANALYSIS SUCCESSFULLY TERMINATED AFTER {:.2f}sec.".format(ELLAPSED_TIME)
     print(SUCCES_MESSAGE)
     
     
