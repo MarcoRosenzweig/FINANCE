@@ -4,8 +4,8 @@ register_matplotlib_converters()
 import utils
 import numpy as np
 
-def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
-               plot_from_date=None, plot_break_values=True, switch_axes=False, \
+def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, 
+               plot_from_date=None, plot_break_values=True, switch_axes=False, 
                *args, **kwargs):
 
     '''
@@ -119,4 +119,11 @@ def plot_model(model, tickers='all', plot_range=None, plot_from_index=None, \
         for n in ax_indices:
             axs[ax_indices[n]].grid()
             axs[ax_indices[n]].legend(loc='upper left')
-        plt.show()
+        try:
+            return_plot = kwargs["return_plot"]
+        except KeyError:
+            return_plot = False
+        if return_plot:
+            return plt
+        else:
+            plt.show()

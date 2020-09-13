@@ -1,9 +1,8 @@
-import utils
+import utils, plotting
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
 import copy
-import plotting
 
 class MODEL():
     '''
@@ -379,13 +378,15 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 p_index = self._parse_kwargs('plot_from_index', kwargs, None)
                 p_date = self._parse_kwargs('plot_from_date', kwargs, None)
                 switch_axes = self._parse_kwargs('switch_axes', kwargs, False)
-                plotting.plot_model(model=test_model, \
-                                    tickers=ticker, \
-                                    plot_range=p_range, \
-                                    plot_from_index=p_index, \
-                                    plot_from_date=p_date, \
-                                    plot_break_values=True, \
-                                    switch_axes=switch_axes)
+                return_plot = self._parse_kwargs("return_plot", kwargs, False)
+                plotting.plot_model(model=test_model, 
+                                    tickers=ticker, 
+                                    plot_range=p_range, 
+                                    plot_from_index=p_index, 
+                                    plot_from_date=p_date, 
+                                    plot_break_values=True, 
+                                    switch_axes=switch_axes,
+                                    return_plot=return_plot)
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
