@@ -68,6 +68,11 @@ parser.add_argument("-wlf", "--writeLogFile",
                     action="store_true",
                     help="Write log file of messages.")
 
+parser.add_argument("-wme", "--writeModelEvaluation",
+                    dest="writeModelEvaluation",
+                    action="store_true",
+                    help="Write model evaluation as csv.")
+
 #===============================================================================
 # UTILS:
 #===============================================================================

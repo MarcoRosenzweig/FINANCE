@@ -47,7 +47,7 @@ def print_opening(do_print=True, *args, **kwargs):
     lines.append('=' * n_break_chars)
     header = ['PRICE MODEL']
     version = ['Version 1.0']
-    copyright = ['Authors: Marco Rosenzweig & Patrick Lorenz']
+    copyright = ['Authors: Patrick Lorenz &  Marco Rosenzweig']
     for text in [header, version, copyright]:
         lines.append(next(map(_format_string, text)))
     lines.append('-' * n_break_chars)

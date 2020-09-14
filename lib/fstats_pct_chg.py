@@ -1,11 +1,12 @@
-import utils
 import scipy.stats as ss
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import utils
 
 def calc_probs(model, time=None, tickers='all', stats_data=None,
                auto_update_tolerances=False, *args, **kwargs):
+    """Function to calculate statistics."""
     do_print = utils.parse_kwargs("do_print", kwargs, True)
     if tickers == 'all':
         tickers = model.tickers
