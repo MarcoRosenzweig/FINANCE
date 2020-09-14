@@ -145,7 +145,6 @@ def main(args):
                         return_plot=return_plot,
                         save_figures=save_figures,
                         output_folder=output_folder,
-                        fig_name="model_evaluation",
                         do_print=do_print)
     #imag_model:
     imag_model = model.copy_model()

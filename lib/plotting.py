@@ -139,7 +139,7 @@ def plot_model(model, tickers='all',
                                            error_arg=False)
         fig_name = utils.parse_kwargs(key="fig_name",
                                       kwargs=kwargs,
-                                      error_arg=None)
+                                      error_arg="{}_evaluation".format(ticker))
         if fig_name is not None:
             plt.suptitle(fig_name)
         if all([save_figures, output_folder, fig_name]):
@@ -148,7 +148,7 @@ def plot_model(model, tickers='all',
             plt.close()
             message = "Exported: %s" %fname
             utils.print_issue("INFO", message, do_print=do_print)
-            return
+            #return
         if return_plot:
             return plt
         #plt.show()

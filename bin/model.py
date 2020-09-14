@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
 import copy
+from os import cpu_count
 
 class MODEL(object):
     '''
@@ -304,7 +305,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                                                                    rng=rng,
                                                                    ticker=ticker))
             else:
-                n_procs = 10
+                n_procs = cpu_count()
                 utils.print_issue('INFO', 'Using {} processes.'.format(n_procs),
                                    do_print=do_print)
                 rng_list = self._do_array_split(rng, n_procs)
@@ -386,7 +387,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 switch_axes = utils.parse_kwargs('switch_axes', kwargs, False)
                 return_plot = utils.parse_kwargs("return_plot", kwargs, False)
                 save_figures = utils.parse_kwargs("save_figures", kwargs, False)
-                fig_name = "imag_value_{:.2f}".format(value)
+                fig_name = "{}_imag_value_{:.2f}".format(ticker, value)
                 output_folder = utils.parse_kwargs("output_folder", kwargs, None)
                 plotting.plot_model(model=test_model,
                                     tickers=ticker,

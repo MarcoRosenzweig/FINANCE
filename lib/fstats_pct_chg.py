@@ -79,7 +79,7 @@ def calc_probs(model, time=None, tickers='all', stats_data=None,
         output_folder = utils.parse_kwargs(key="output_folder",
                                            kwargs=kwargs,
                                            error_arg=False)
-        fig_name = "model_statistics"
+        fig_name = "{}_statistics".format(ticker)
         if fig_name is not None:
             plt.suptitle(fig_name)
         if all([save_figures, output_folder, fig_name]):
@@ -88,7 +88,7 @@ def calc_probs(model, time=None, tickers='all', stats_data=None,
             plt.close()
             message = "Exported: %s" %fname
             utils.print_issue("INFO", message, do_print=do_print)
-            return
+            #return
         if return_plot:
             return plt
 
