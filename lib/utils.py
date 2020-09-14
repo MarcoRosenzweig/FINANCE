@@ -94,7 +94,7 @@ def check_ticker_input(tickers_input, tickers_avail, do_print=True):
     valid_tickers = []
     for ticker in tickers_input:
         if ticker not in tickers_avail:
-            _print_issue('WARNING', 'Ticker "{}" not in available \
+            print_issue('WARNING', 'Ticker "{}" not in available \
 tickers'.format(ticker), do_print=do_print)
         else:
             valid_tickers.append(ticker)
@@ -102,9 +102,17 @@ tickers'.format(ticker), do_print=do_print)
         raise OSError('[DEPP]: No input ticker in self.tickers.')
     return valid_tickers
 
-def _print_issue(key, issue, do_print=True):
+def print_issue(key, issue, do_print=True):
+    if key is not None:
+        message = '[{}]: {}'.format(key, issue)
+    else:
+        message = '{}'.format(issue)
     if do_print:
-        if key is not None:
-            print('[{}]: {}'.format(key, issue))
-        else:
-            print('{}'.format(issue))
+        print(message)
+
+def parse_kwargs(key, kwargs, error_arg=False):
+    """Function to parse kwargs."""
+    try:
+        return kwargs[key]
+    except KeyError:
+        return error_arg

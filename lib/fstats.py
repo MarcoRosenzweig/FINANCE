@@ -20,8 +20,8 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
     except KeyError:
         start = None
     for ticker in tickers:
-        utils._print_issue(None, '=' * 80)
-        utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
+        utils.print_issue(None, '=' * 80)
+        utils.print_issue('INFO', 'Current ticker: {}'.format(ticker))
         z_values, tols, means = _create_z_values(model=model, ticker=ticker, \
                                                  stats_data=stats_data, timezone=timezone, \
                                                  start=start, \
@@ -63,10 +63,10 @@ def calc_probs(model, time=None, tickers='all', stats_data=None, \
         plt.setp(axs, ylabel='Probability [%]')
         prob_between = np.abs(np.diff(poly_probs))[0]
         for n, prob in enumerate(poly_probs):
-            utils._print_issue('STATS-EVAL', \
+            utils.print_issue('STATS-EVAL', \
                                'Probability for tol={:.5f}: {:.2f}%'.format(tols[arg][n], prob))
 
-        utils._print_issue('STATS-EVAL', \
+        utils.print_issue('STATS-EVAL', \
                            'Probability between: {:.2f}%'.format(prob_between))
         plt.show()
 
@@ -86,13 +86,13 @@ def _create_z_values(model, ticker, stats_data=None, \
                                                 timezone=timezone, \
                                                 start=start)
     if auto_update_tolerances:
-        utils._print_issue('STATS-INFO', 'Auto update of tolerances!')
+        utils.print_issue('STATS-INFO', 'Auto update of tolerances!')
         current_value = utils.download_data(tickers=ticker, \
                                             start=(pd.Timestamp.today() - pd.Timedelta('1 days')), \
                                             value='Close').values[-1]
         current_tols = model.break_values[ticker] - current_value
-        utils._print_issue('STATS-INFO', 'Current value: {}!'.format(current_value))
-        utils._print_issue('STATS-INFO', 'New tolerances: {}!'.format(current_tols))
+        utils.print_issue('STATS-INFO', 'Current value: {}!'.format(current_value))
+        utils.print_issue('STATS-INFO', 'New tolerances: {}!'.format(current_tols))
         tol_unten = np.sort(current_tols)[0]
         tol_oben = np.sort(current_tols)[1]
     else:

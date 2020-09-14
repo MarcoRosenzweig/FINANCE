@@ -1,10 +1,11 @@
-import utils, plotting
+import plotting
+import utils
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
 import copy
 
-class MODEL():
+class MODEL(object):
     '''
     Simple model to trade stocks, cryptos etc.
     Initialization:
@@ -15,9 +16,12 @@ class MODEL():
             default: 1
         - ticker_df: dictionaries of pandas DataFrame for each ticker.
     '''
-    def __init__(self, tickers, data=None, buy_delay=1, periods=(12, 26, 9)):
-        self.tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                                tickers_avail=None, \
+    def __init__(self, tickers, 
+                 data=None, 
+                 buy_delay=1, 
+                 periods=(12, 26, 9)):
+        self.tickers = utils.check_ticker_input(tickers_input=tickers,
+                                                tickers_avail=None,
                                                 do_print=True)
         self.data = data
         self.local_min, self.local_max, self.grad = None, None, None
@@ -32,8 +36,8 @@ class MODEL():
         '''
         Function to get asset historical prices.
         '''
-        self.data = utils.download_data(tickers=self.tickers, \
-                                        value=value, \
+        self.data = utils.download_data(tickers=self.tickers,
+                                        value=value,
                                         *args, **kwargs)
         #if only one ticker in self.tickers: download_data returns series!
         if not isinstance(self.data, pd.core.frame.DataFrame):
@@ -42,15 +46,15 @@ class MODEL():
         if filter_date_range is not None:
             self.apply_date_filter(filter_date_range=filter_date_range)
 
-    def check_for_nan_values(self, tickers='all', exclude_last_value=True, \
+    def check_for_nan_values(self, tickers='all', exclude_last_value=True,
                              *args, **kwargs):
         #TODO: CODE THIS FUNCTION !
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
         else:
-            tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                               tickers_avail=self.tickers, \
+            tickers = utils.check_ticker_input(tickers_input=tickers,
+                                               tickers_avail=self.tickers,
                                                do_print=True)
         for ticker in tickers:
             if exclude_last_value:
@@ -61,7 +65,7 @@ class MODEL():
                 self.data[ticker] = filtered_data
 
             else:
-                utils._print_issue('INFO', 'Last value is considered to be removed.', \
+                utils.print_issue('INFO', 'Last value is considered to be removed.',
                                     do_print=do_print)
                 nan_indices = np.where(np.isnan(self.data[ticker]))[0]
             if nan_indices.size > 0:
@@ -72,14 +76,14 @@ class MODEL():
                 if self._get_answer(input_message=input_message):
                     self.data[ticker] = self.data[ticker][~nan_indices]
             else:
-                utils._print_issue('INFO', 'No NaN values detected.', \
+                utils.print_issue('INFO', 'No NaN values detected.',
                                     do_print=do_print)
 
     def apply_date_filter(self, filter_date_range, force_apply=True, do_print=True):
         try:
             filtered_data = self.data.reindex(filter_date_range)
         except KeyError:
-            utils._print_issue('WARNING', 'filter not in data.', do_print=do_print)
+            utils.print_issue('WARNING', 'filter not in data.', do_print=do_print)
             return
         else:
             #1 index is ticker, 0 index is data
@@ -87,18 +91,18 @@ class MODEL():
             n_nan_values = nan_values.size
             if  n_nan_values > 0:
                 if force_apply == True:
-                    utils._print_issue('WARNING', '"force_apply" is active. Removing {} NaN values.'\
+                    utils.print_issue('WARNING', '"force_apply" is active. Removing {} NaN values.'\
     .format(n_nan_values), do_print=do_print)
                     force_filter = True
                 else:
-                    utils._print_issue('WARNING', 'Filter would result in {} NaN values.'\
+                    utils.print_issue('WARNING', 'Filter would result in {} NaN values.'\
     .format(n_nan_values), do_print=do_print)
                     input_message = 'Remove NaN values?: '
                     force_filter = self._get_answer(input_message=input_message)
                 if force_filter:
                     filtered_data = filtered_data.dropna()
             self.data = filtered_data
-            utils._print_issue('INFO', 'filter applied.', do_print=do_print)
+            utils.print_issue('INFO', 'filter applied.', do_print=do_print)
 
     def eval_model(self, tickers='all', entry_money=200, fees=(1.0029, .9954), tax=.25, visualize=False, *args, **kwargs):
         '''
@@ -118,25 +122,25 @@ class MODEL():
             - net_income: Net Income/win after entry_money (and possibly tax) subtracted
             - df_return: model evaluation as pandas DataFrame
         '''
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             valid_tickers = self.tickers
         else:
-            valid_tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                                     tickers_avail=self.tickers, \
-                                                     do_print=True)
-        utils.print_opening(ticker=valid_tickers, \
-                            start_date=self.data.index[0].strftime('%D'), \
-                            end_date=self.data.index[-1].strftime('%D'), \
-                            initial_investment_per_ticker=entry_money, \
+            valid_tickers = utils.check_ticker_input(tickers_input=tickers,
+                                                     tickers_avail=self.tickers,
+                                                     do_print=do_print)
+        utils.print_opening(ticker=valid_tickers,
+                            start_date=self.data.index[0].strftime('%D'),
+                            end_date=self.data.index[-1].strftime('%D'),
+                            initial_investment_per_ticker=entry_money,
                             do_print=do_print)
 
         if any([self.local_min is None, self.local_max is None, self.grad is None]):
             self._init_model(do_print=do_print)
 
         for ticker in valid_tickers:
-            utils._print_issue('TICKER', ticker, do_print=do_print)
-            buy_locs, sell_locs = self._get_locs(ticker=ticker, \
+            utils.print_issue('TICKER', ticker, do_print=do_print)
+            buy_locs, sell_locs = self._get_locs(ticker=ticker,
                                                  do_print=do_print)
             buy_prices = self.data[ticker][buy_locs]
             buy_dates = self.data[ticker].index.values[buy_locs]
@@ -185,11 +189,11 @@ class MODEL():
             average_loss = np.mean(win_loss[np.where(win_loss < 0)])
             if np.sum(trade_wins) > 800:
                 tax_pays = np.sum(trade_wins) * tax
-                utils._print_issue('INFO', '{:.2f} tax was paid.'.format(tax_pays), \
+                utils.print_issue('INFO', '{:.2f} tax was paid.'.format(tax_pays),
                                    do_print=do_print)
                 net_income = (trade_rewards[-1] - entry_money) * (1 - tax)
             else:
-                utils._print_issue('INFO', 'No tax paid.', \
+                utils.print_issue('INFO', 'No tax paid.',
                                    do_print=do_print)
                 net_income = np.sum(trade_wins)
             #create final DataFrame
@@ -198,11 +202,11 @@ class MODEL():
             #be aware that buy_dates can be 1 entry longer then sell dates!
             if buy_dates.shape[0] > sell_dates.shape[0]:
                 if sell_dates.shape[0] > 0:
-                    utils._print_issue('INFO', 'Last entry of "Sell Dates" will \
+                    utils.print_issue('INFO', 'Last entry of "Sell Dates" will \
 be assigned equally as the penultimate one.', do_print=do_print)
                     sell_dates = np.append(sell_dates, sell_dates[-1])
                 else:
-                    utils._print_issue('INFO', 'First entry of "Sell Dates" \
+                    utils.print_issue('INFO', 'First entry of "Sell Dates" \
 will be first entry of "Buy Dates".', do_print=do_print)
                     sell_dates = buy_dates[0]
                 try:
@@ -214,69 +218,69 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 win_loss = np.append(win_loss, np.nan)
                 sell_grad = np.append(sell_grad, np.nan)
             grad_diff = sell_grad - buy_grad
-            final_df = pd.DataFrame(data = {'Buy Dates': buy_dates, \
-                                            'Sell Dates': sell_dates, \
-                                            'Buy Prices': buy_prices.to_numpy(), \
-                                            'Sell Prices': sell_prices.to_numpy(), \
-                                            'Trade Reward': trade_rewards, \
-                                            'Trade Win': trade_wins, \
-                                            'Trade Efficiency': win_loss, \
-                                            'Grad at Buy': buy_grad, \
-                                            'Grad at Sell': sell_grad, \
+            final_df = pd.DataFrame(data = {'Buy Dates': buy_dates,
+                                            'Sell Dates': sell_dates,
+                                            'Buy Prices': buy_prices.to_numpy(),
+                                            'Sell Prices': sell_prices.to_numpy(),
+                                            'Trade Reward': trade_rewards,
+                                            'Trade Win': trade_wins,
+                                            'Trade Efficiency': win_loss,
+                                            'Grad at Buy': buy_grad,
+                                            'Grad at Sell': sell_grad,
                                             'Grad Difference': grad_diff})
             self.ticker_df[ticker] = final_df
-            utils._print_issue(None, '-' * 80, do_print=do_print)
-            utils._print_issue('SUMMARY', \
-                               'Average trade win: {:.10%}'.format(average_win), \
+            utils.print_issue(None, '-' * 80, do_print=do_print)
+            utils.print_issue('SUMMARY',
+                               'Average trade win: {:.10%}'.format(average_win),
                                do_print=do_print)
-            utils._print_issue('SUMMARY', \
-                               'Average trade loss: {:.10%}'.format(average_loss), \
+            utils.print_issue('SUMMARY',
+                               'Average trade loss: {:.10%}'.format(average_loss),
                                do_print=do_print)
-            utils._print_issue('SUMMARY', \
-                               'Efficiency: {:.2%}'.format(efficiency), \
+            utils.print_issue('SUMMARY',
+                               'Efficiency: {:.2%}'.format(efficiency),
                                do_print=do_print)
-            utils._print_issue('SUMMARY', \
-                               'NET WIN: {:.2f}'.format(net_income), \
+            utils.print_issue('SUMMARY',
+                               'NET WIN: {:.2f}'.format(net_income),
                                do_print=do_print)
-            utils._print_issue(None, '=' * 80, do_print=do_print)
+            utils.print_issue(None, '=' * 80, do_print=do_print)
 
     def copy_model(self):
         return copy.deepcopy(self)
 
     def append_timedelta(self, timedelta=1, overwrite_data=True, *args, **kwargs):
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
         new_entry = self.data.index[-1] + pd.Timedelta(days=timedelta)
         final_entries = list(self.data.index)
         final_entries.append(new_entry)
         idx = pd.DatetimeIndex(final_entries)
         new_data = self.data.reindex(idx)
         if overwrite_data:
-            utils._print_issue('INFO', 'New data was appended.', \
+            utils.print_issue('INFO', 'New data was appended.',
                                do_print=do_print)
             self.data = new_data
         else:
             return new_data
 
-    def comp_break_values(self, tickers='all', refactor_step_size=1, \
+    def comp_break_values(self, tickers='all', refactor_step_size=1,
                           append_break_values=False, parallel_computing=True,\
                           *args, **kwargs):
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
         if tickers == 'all':
             tickers = self.tickers
         else:
-            tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                               tickers_avail=self.tickers, \
+            tickers = utils.check_ticker_input(tickers_input=tickers,
+                                               tickers_avail=self.tickers,
                                                do_print=True)
         imag_model = self.copy_model()
         break_values_dict = dict.fromkeys(tickers)
         current_values = dict.fromkeys(tickers, None)
         tolerances = dict.fromkeys(tickers)
         deviation = .3
-        utils._print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation), \
+        utils.print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation),
                            do_print=do_print)
 
         for ticker in tickers:
-            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker), \
+            utils.print_issue('INFO', 'Current ticker: {}'.format(ticker),
                                do_print=do_print)
             break_values = [None, None]
             if np.isnan(self.data[ticker].values[-1]):
@@ -292,16 +296,16 @@ will be first entry of "Buy Dates".', do_print=do_print)
             try:
                 import multiprocessing as mp
             except ModuleNotFoundError:
-                utils._print_issue('ERROR', 'Multiprocessing module not available.', \
+                utils.print_issue('ERROR', 'Multiprocessing module not available.',
                                    do_print=do_print)
                 parallel_computing = False
             if not parallel_computing:
-                break_values_dict[ticker] = np.sort(self._comp_bvs(model=imag_model, \
-                                                                   rng=rng, \
+                break_values_dict[ticker] = np.sort(self._comp_bvs(model=imag_model,
+                                                                   rng=rng,
                                                                    ticker=ticker))
             else:
                 n_procs = 10
-                utils._print_issue('INFO', 'Using {} processes.'.format(n_procs),
+                utils.print_issue('INFO', 'Using {} processes.'.format(n_procs),
                                    do_print=do_print)
                 rng_list = self._do_array_split(rng, n_procs)
                 from functools import partial
@@ -322,51 +326,53 @@ will be first entry of "Buy Dates".', do_print=do_print)
         self.tolerances = tolerances
         self.break_values = break_values_dict
         if append_break_values:
-            utils._print_issue('INFO', 'Appending break values to model data', \
-                               do_print=do_print)
-            for ticker in valid_tickers:
+            utils.print_issue('INFO', 'Appending break values to model data',
+                              do_print=do_print)
+            for ticker in tickers:
                 smal_tol = np.argsort(tolerances[ticker])[0]
                 self.data[ticker][-1] = break_values_dict[ticker][smal_tol]
                 self._init_model(do_print=False)
         else:
-            utils._print_issue('INFO', 'Current values: {}'.format(current_values), \
-                              do_print=do_print)
-            utils._print_issue('INFO', 'Break values: {}'.format(break_values_dict), \
-                              do_print=do_print)
-            utils._print_issue('INFO', 'Tolerances: {}'.format(tolerances), \
-                              do_print=do_print)
+            utils.print_issue('INFO', 'Current values: {}'.format(current_values),
+                               do_print=do_print)
+            utils.print_issue('INFO', 'Break values: {}'.format(break_values_dict),
+                               do_print=do_print)
+            utils.print_issue('INFO', 'Tolerances: {}'.format(tolerances),
+                               do_print=do_print)
 
     def show_possibilities(self, tickers='all', *args, **kwargs):
+        do_print = utils.parse_kwargs("do_print", kwargs, True)
         if tickers == 'all':
             tickers = self.tickers
         else:
-            tickers = utils.check_ticker_input(tickers_input=tickers, \
-                                               tickers_avail=self.tickers, \
-                                               do_print=True)
+            tickers = utils.check_ticker_input(tickers_input=tickers,
+                                               tickers_avail=self.tickers,
+                                               do_print=do_print)
         for ticker in tickers:
-            utils._print_issue(None, '=' * 80)
-            utils._print_issue('INFO', 'Current ticker: {}'.format(ticker))
+            utils.print_issue(None, '=' * 80, do_print=do_print)
+            utils.print_issue('INFO', 'Current ticker: {}'.format(ticker), do_print=do_print)
             #check if last value is nan:
             last_value_index = -1
             if not np.isnan(self.data[ticker][last_value_index]):
-                utils._print_issue('WARNING', 'Last value of data set is not NaN!')
+                utils.print_issue('WARNING', 'Last value of data set is not NaN!')
                 input_message = 'Proceed anyways? '
                 if not self._get_answer(input_message=input_message):
                     continue
             else:
                 last_value_index = -2
             if self.break_values[ticker] is None and generic_value is None:
-                utils._print_issue('ERROR', 'No break values computed for this ticker!')
+                utils.print_issue('ERROR', 'No break values computed for this ticker!')
                 continue
-            deviation = self._parse_kwargs('deviation', kwargs, error_arg=.0125)
+            deviation = utils.parse_kwargs('deviation', kwargs, error_arg=.0125)
             bottom_value, top_value = self.break_values[ticker]
             middle_value = (top_value - bottom_value)*.5 + bottom_value
             bottom_value *= (1 - deviation)
             top_value *= (1 + deviation)
             test_values = [bottom_value, middle_value, top_value]
             for value in test_values:
-                utils._print_issue(None, '-' * 80)
-                utils._print_issue('INFO', 'Result for value: {}'.format(value))
+                utils.print_issue(None, '-' * 80, do_print=do_print)
+                utils.print_issue('INFO', 'Result for value: {}'.format(value),
+                                  do_print=do_print)
                 #create an imag_model:
                 test_model = self.copy_model()
                 #assign the value to the last entry:
@@ -374,19 +380,25 @@ will be first entry of "Buy Dates".', do_print=do_print)
                 #init model
                 test_model._init_model(do_print=False)
                 test_model.eval_model(do_print=False)
-                p_range = self._parse_kwargs('plot_range', kwargs, None)
-                p_index = self._parse_kwargs('plot_from_index', kwargs, None)
-                p_date = self._parse_kwargs('plot_from_date', kwargs, None)
-                switch_axes = self._parse_kwargs('switch_axes', kwargs, False)
-                return_plot = self._parse_kwargs("return_plot", kwargs, False)
-                plotting.plot_model(model=test_model, 
-                                    tickers=ticker, 
-                                    plot_range=p_range, 
-                                    plot_from_index=p_index, 
-                                    plot_from_date=p_date, 
-                                    plot_break_values=True, 
+                p_range = utils.parse_kwargs('plot_range', kwargs, None)
+                p_index = utils.parse_kwargs('plot_from_index', kwargs, None)
+                p_date = utils.parse_kwargs('plot_from_date', kwargs, None)
+                switch_axes = utils.parse_kwargs('switch_axes', kwargs, False)
+                return_plot = utils.parse_kwargs("return_plot", kwargs, False)
+                save_figures = utils.parse_kwargs("save_figures", kwargs, False)
+                fig_name = "imag_value_{:.2f}".format(value)
+                output_folder = utils.parse_kwargs("output_folder", kwargs, None)
+                plotting.plot_model(model=test_model,
+                                    tickers=ticker,
+                                    plot_range=p_range,
+                                    plot_from_index=p_index,
+                                    plot_from_date=p_date,
+                                    plot_break_values=True,
                                     switch_axes=switch_axes,
-                                    return_plot=return_plot)
+                                    return_plot=return_plot,
+                                    output_folder=output_folder,
+                                    save_figures=save_figures,
+                                    fig_name=fig_name)
 ###############################################################################
 #   INTERNAL FUNCTIONS
 ###############################################################################
@@ -419,20 +431,19 @@ will be first entry of "Buy Dates".', do_print=do_print)
             - local_max: Sell prices
             - grad: "gradient" of the model (optionally)
         '''
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
-        utils._print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers), \
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
+        utils.print_issue('INIT', 'Initialising model for tickers: {}'.format(self.tickers),
                           do_print=do_print)
-        macd = self._calc_ema(self.data, self.periods[0]) - \
-               self._calc_ema(self.data, self.periods[1])
+        macd = self._calc_ema(self.data, self.periods[0]) - self._calc_ema(self.data, self.periods[1])
         signal_line = self._calc_ema(macd, self.periods[2])
         if len(self.tickers) == 1:
-            grad = np.gradient(macd[self.tickers[0]] - \
+            grad = np.gradient(macd[self.tickers[0]] -
                                signal_line[self.tickers[0]])
         else:
             grad = np.gradient(macd - signal_line)
         local_min, local_max, grad_dict = {}, {}, {}
         if isinstance(grad, list):
-            utils._print_issue('WARNING', 'Ignoring second entry of gradient!', \
+            utils.print_issue('WARNING', 'Ignoring second entry of gradient!',
                                do_print=do_print)
             grad = grad[0].T
             for n in range(grad.shape[0]):
@@ -451,13 +462,13 @@ will be first entry of "Buy Dates".', do_print=do_print)
         self.local_min = local_min
         self.local_max = local_max
         self.grad = grad_dict
-        utils._print_issue('INIT', 'Successfully initialized model.', \
+        utils.print_issue('INIT', 'Successfully initialized model.',
                           do_print=do_print)
-        utils._print_issue(None, '*' * 80, \
+        utils.print_issue(None, '*' * 80,
                           do_print=do_print)
 
     def _get_locs(self, ticker, *args, **kwargs):
-        do_print = self._parse_kwargs('do_print', kwargs, error_arg=True)
+        do_print = utils.parse_kwargs('do_print', kwargs, error_arg=True)
         if len(self.local_min) > 1:
             buy_locs = self.local_min[ticker][0] + self.buy_delay
             sell_locs = self.local_max[ticker][0] + self.buy_delay
@@ -468,16 +479,16 @@ will be first entry of "Buy Dates".', do_print=do_print)
             if buy_locs[0] > sell_locs[0]:
                 sell_locs = sell_locs[1:]
         except IndexError:
-            utils._print_issue('INFO', 'First sell position will not be displayed.', \
+            utils.print_issue('INFO', 'First sell position will not be displayed.',
                                do_print=do_print)
         #check locs:
         if buy_locs.shape[0] > sell_locs.shape[0]:
-            utils._print_issue('INFO', 'Open position.', do_print=do_print)
+            utils.print_issue('INFO', 'Open position.', do_print=do_print)
         elif buy_locs.shape[0] < sell_locs.shape[0]:
             try:
                 sell_locs[0] = buy_locs[0]
             except IndexError:
-                utils._print_issue('INFO', 'No buy locations occured.\
+                utils.print_issue('INFO', 'No buy locations occured.\
     Sell locations are set to buy locations.', do_print=do_print)
                 sell_locs = buy_locs
         return buy_locs, sell_locs
@@ -520,7 +531,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
         valid_tickers = []
         for ticker in tickers:
             if ticker not in self.tickers:
-                utils._print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker), \
+                utils.print_issue('WARNING', 'Ticker "{}" not in self.tickers'.format(ticker),
                                   do_print=do_print)
             else:
                 valid_tickers.append(ticker)
@@ -537,13 +548,8 @@ will be first entry of "Buy Dates".', do_print=do_print)
             elif answer == 'n':
                 return False
             else:
-                utils._print_issue('ERROR', 'Possible answers: {}.'.format(possibilities))
-
-    def _parse_kwargs(self, key, kwargs, error_arg=False):
-        try:
-            return kwargs[key]
-        except KeyError:
-            return error_arg
+                utils.print_issue('ERROR', 'Possible answers: {}.'.format(possibilities))
+                
 
 class STATISTICAL_MODEL(MODEL):
     """docstring for STATISTICAL_MODEL."""
