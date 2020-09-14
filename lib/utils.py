@@ -103,10 +103,10 @@ tickers'.format(ticker), do_print=do_print)
     return valid_tickers
 
 def print_issue(key, issue, do_print=True):
-    if key is not None:
-        message = '[{}]: {}'.format(key, issue)
-    else:
+    if key is None:
         message = '{}'.format(issue)
+    else:
+        message = '[{}]: {}'.format(key, issue)
     if do_print:
         print(message)
 
