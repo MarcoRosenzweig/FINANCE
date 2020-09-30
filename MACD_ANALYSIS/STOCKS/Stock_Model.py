@@ -133,13 +133,13 @@ def main(args):
     #main function starts here:
     #specify dates:
     start_date = todays_date - pd.Timedelta("{} days".format(start_date_delta))
-    filter_date = start_date.floor(freq="D").replace(hour=day_hour)
+    ##filter_date = start_date.floor(freq="D").replace(hour=day_hour)
     #get data:
     model = MODEL(tickers=tickers)
-    model.get_data(start=start_date, interval="60m")
-    #filter by datetime:
-    date_range = utils.create_date_range(start_date=filter_date)
-    model.apply_date_filter(date_range, force_apply=True, do_print=do_print)
+    model.get_data(start=start_date, interval="1d")
+    #filter by datetime: no filtering for stocks due to different timezones etc.
+    ##date_range = utils.create_date_range(start_date=filter_date)
+    ##model.apply_date_filter(date_range, force_apply=True, do_print=do_print)
     #eval model:
     model.eval_model(tickers=tickers, entry_money=entry_money, do_print=do_print)
     #plotting:
@@ -157,6 +157,8 @@ def main(args):
     #compute break values:
     imag_model.comp_break_values(tickers="all", 
                                  parallel_computing=True, 
+                                 refactor_step_size=10,
+                                 deviation=.3,
                                  do_print=do_print)
     #init model:
     imag_model._init_model(do_print=do_print)
@@ -167,13 +169,14 @@ def main(args):
                                   save_figures=save_figures,
                                   output_folder=output_folder,
                                   do_print=do_print)
-    #calulate statistics:
-    fstats_pct_chg.calc_probs(model=imag_model, 
-                              tickers="all", 
-                              auto_update_tolerances=True,
-                              return_plot=return_plot,
-                              save_figures=save_figures,
-                              output_folder=output_folder)
+    #calulate statistics: currently not working due to range filter!
+    #fstats_pct_chg.calc_probs(model=imag_model, 
+    #                          tickers="all", 
+    #                          auto_update_tolerances=True,
+    #                          return_plot=return_plot,
+    #                          save_figures=save_figures,
+    #                          output_folder=output_folder,
+    #                          interval="1d")
     #disable logger here:
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
