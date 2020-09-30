@@ -41,7 +41,10 @@ def plot_model(model, tickers='all',
             indices = np.arange(plot_from_index,
                                 model.data[ticker].index.shape[0], 1)
         elif plot_from_date is not None:
-            idx = model.data[ticker].index.get_loc(plot_from_date).start
+            if isinstance(model.data[ticker].index.get_loc(plot_from_date), slice):
+                idx = model.data[ticker].index.get_loc(plot_from_date).start
+            else:
+                idx = model.data[ticker].index.get_loc(plot_from_date)
             x_axis = model.data[ticker].index[idx:]
             indices = np.arange(idx, model.data[ticker].index.shape[0], 1)
         else:

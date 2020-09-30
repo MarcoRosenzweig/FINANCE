@@ -276,7 +276,7 @@ will be first entry of "Buy Dates".', do_print=do_print)
         break_values_dict = dict.fromkeys(tickers)
         current_values = dict.fromkeys(tickers, None)
         tolerances = dict.fromkeys(tickers)
-        deviation = .3
+        deviation = utils.parse_kwargs('deviation', kwargs, error_arg=.3)
         utils.print_issue('INFO', 'Compute break values with {:.2%} deviation'.format(deviation),
                            do_print=do_print)
 

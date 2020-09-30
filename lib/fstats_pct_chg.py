@@ -21,13 +21,18 @@ def calc_probs(model, time=None, tickers='all', stats_data=None,
         start = kwargs['start']
     except KeyError:
         start = None
+    try:
+        interval = kwargs["interval"]
+    except KeyError:
+        interval = "60m"
     for ticker in tickers:
         utils.print_issue(None, '=' * 80)
         utils.print_issue('INFO', 'Current ticker: {}'.format(ticker))
         z_values, tols, means = _create_z_values(model=model, ticker=ticker,
                                                  stats_data=stats_data, timezone=timezone,
                                                  start=start,
-                                                 auto_update_tolerances=auto_update_tolerances)
+                                                 auto_update_tolerances=auto_update_tolerances,
+                                                 interval=interval)
 
         freq_range, frequencies = _create_freq()
         delta_t = model.data.index[-1].to_datetime64() - pd.Timestamp.now().to_datetime64()
@@ -104,10 +109,15 @@ def _create_z_values(model, ticker, stats_data=None,
         start = kwargs['start']
     except KeyError:
         start = None
+    try:
+        interval = kwargs["interval"]
+    except KeyError:
+        interval = "60m"
     _, means, stds = _get_price_moves_and_stats(ticker=ticker,
                                                 stats_data=stats_data,
                                                 timezone=timezone,
-                                                start=start)
+                                                start=start,
+                                                interval=interval)
     if auto_update_tolerances:
         utils.print_issue('STATS-INFO', 'Auto update of tolerances!')
         current_value = utils.download_data(tickers=ticker,
@@ -126,14 +136,15 @@ def _create_z_values(model, ticker, stats_data=None,
     return np.array([z_values_unten, z_values_oben]), np.array([tol_unten, tol_oben]), means
 
 def _get_price_moves_and_stats(ticker, stats_data=None,
-                               timezone=None, start=None):
+                               timezone=None, start=None, 
+                               interval='60m'):
     if timezone is None:
         timezone = 'Europe/London'
     if start is None:
         start = pd.Timestamp(2019, 1, 1, 0)
     if stats_data is None:
         stats_data = utils.download_data(tickers=ticker, start=start,
-                                         interval='60m', value='Close')
+                                         interval=interval, value='Close')
     freq_range, frequencies = _create_freq()
     price_movements = dict.fromkeys(frequencies)
     means = np.zeros(freq_range.shape)
@@ -147,11 +158,11 @@ def _get_price_moves_and_stats(ticker, stats_data=None,
         means[index] = np.mean(current_moves)
         stds[index] = np.std(current_moves)
         price_movements[freq] = current_moves
-        hours = np.flip(np.arange(1,25,1))
-        df = pd.DataFrame()
-        df['hours'] = pd.Series(hours)
-        df['pct_change'] = pd.Series(np.flip(means))
-        first_key = list(price_movements.values())[1]
+        #hours = np.flip(np.arange(1,25,1))
+        #df = pd.DataFrame()
+        #df['hours'] = pd.Series(hours)
+        #df['pct_change'] = pd.Series(np.flip(means))
+        #first_key = list(price_movements.values())[1]
     return price_movements, means, stds
 
 def _create_freq():
